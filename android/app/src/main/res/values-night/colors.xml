@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark-mode BIGB tokens for Material date/time pickers -->
+    <color name="bigb_primary">#5DA0F6</color>
+    <color name="bigb_primary_dark">#1877F2</color>
+    <color name="bigb_primary_muted">#0E2B50</color>
+    <color name="bigb_on_primary">#0D1E34</color>
+    <color name="bigb_background">#1D1E1F</color>
+    <color name="bigb_surface">#2A2B2D</color>
+    <color name="bigb_on_surface">#F8F8F9</color>
+    <color name="bigb_on_surface_variant">#C0C2C6</color>
+    <color name="bigb_outline">#3A3B3F</color>
+</resources>
