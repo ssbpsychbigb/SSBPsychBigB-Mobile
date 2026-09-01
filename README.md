@@ -1,97 +1,236 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# BIGB Mobile App
 
-# Getting Started
+Production-oriented React Native app for BIGB.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+This document is the base guide for all future mobile development decisions.
 
-## Step 1: Start Metro
+## Product Direction
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+BIGB mobile is an end-user action app, not an admin or ERP console.
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- Mobile focus: social, learning, AI, communication, progress tracking.
+- Web/Admin focus: heavy creation, management, moderation, finance, exports, platform controls.
+
+## Role x Channel Policy
+
+Every permission should be checked with role + channel.
+
+- `mobile`: daily user operations and lightweight creator actions.
+- `web`: heavy workflows and structured creation.
+- `admin`: governance and platform controls.
+
+Examples:
+
+- Create course -> web/admin only
+- Edit course -> web/admin only
+- Create post -> mobile/web
+- Profile edit -> mobile/web
+- Platform settings -> admin only
+- Admin approve/reject queue -> **admin web only**
+- Institute join Accept/Reject, educator hire Accept/Decline -> **mobile OK** (minimal taps)
+
+### Mobile auth module (complete client surface)
+
+Guest → Splash → Welcome → Login/Register → OTP → `/auth/me` gate:
+
+| Status / role | Destination |
+|---------------|-------------|
+| `pending_verification` | Under Review |
+| `rejected` | Rejected → Fix & resubmit |
+| `restricted` | Restricted lock |
+| `suspended` / `banned` / `deleted` | Force logout |
+| Active **aspirant** (first time) | Onboarding (goal → institute code → prep) |
+| Active institute / educator / officer / onboarded aspirant | App shell (role home) |
+
+Google Sign-In: `FEATURE_FLAGS.googleSignIn` (off until SDK + backend).  
+Aspirant institute-code **server link** waits on backend; mobile stores onboarding locally.
+
+## Architecture
+
+```txt
+src/
+  app/
+    App.tsx
+    providers/
+    navigation/
+  features/
+    auth/
+    home/
+    feed/
+    learn/
+    ai/
+    profile/
+    institute/
+    educator/
+    bookmark/
+    message/
+  shared/
+    api/
+    constants/
+    storage/
+    theme/
+    ui/
+    lib/
+    hooks/
+    errors/
+    types/
+  assets/
+    fonts/
+    images/
+```
+
+## Stack
+
+- React Native 0.86.x (New Architecture)
+- React Navigation 7.x
+- Zustand 5.x + MMKV 4.x
+- TanStack Query 5.x
+- Reanimated 4.x + Worklets
+- React Hook Form + Zod
+- Lucide icons (`lucide-react-native`)
+- `react-native-size-matters` (responsive `s` / `vs` / `ms`)
+- `react-native-toast-message` (app-wide toasts via `showToast`)
+- `@react-native-community/datetimepicker` (themed `AppDateField` calendar)
+
+## UI and Design Rules
+
+- Use design tokens from `src/shared/constants`.
+- Do not add arbitrary spacing, colors, or font sizes.
+- Use Sora fonts from `src/assets/fonts`.
+- Use `shared/ui` primitives and compose in features.
+- Buttons: use `Button` (heights `ms(40/44/48)`). Do **not** use `vs()` for CTA height — it looks chunky on tall phones.
+- Typography: keep the compact product scale in `AppText` (body ~15, title ~20, display ~28). Do not use poster-sized type on app screens.
+
+## Responsive Layout Rules
+
+Baseline design: ~375×812 (iPhone-class). Helpers live in `src/shared/lib/responsive.ts`.
+
+| Helper | Use for |
+|--------|---------|
+| `s(n)` | width, paddingHorizontal, marginHorizontal, maxWidth |
+| `vs(n)` | height, paddingVertical, marginVertical, top/bottom |
+| `ms(n)` | borderRadius, gaps, Lucide `size`, hitSlop |
+| `fontSize(n)` / `lineHeight(n)` | StyleSheet typography (prefer `AppText` variants) |
+
+Rules:
+
+- Prefer flex / `%` for structure; scale only fixed design numbers.
+- Do **not** hardcode raw pixels in StyleSheets or icon sizes — use `s` / `vs` / `ms`.
+- Do **not** scale `StyleSheet.hairlineWidth`, `borderWidth: 1`, flex, opacity, or animation scale factors.
+- `theme.spacing` / `theme.radius` / `typography.fontSize` are already scaled — use them as-is.
+- Cap accessibility font blow-up via `AppText` `maxFontSizeMultiplier` (default 1.35).
+
+## Toast Rules
+
+- Use `showToast.success|error|info|warning` from `@/shared/ui/toast` (or `@/shared/ui`).
+- Do not use `Alert.alert` for routine feedback.
+- Host is mounted once in `AppProviders` (`AppToastHost`).
+- Custom layouts live in `src/shared/ui/toast/` — keep brand tokens + responsive helpers.
+
+## Security and Config Rules
+
+- Never hardcode secrets or production keys.
+- Keep app runtime config centralized in `src/shared/constants/config.ts`.
+- Keep sensitive values in secure environment config.
+
+## Local Setup
+
+### Prerequisites
+
+- Node `>=22.11.0`
+- Yarn `1.22.x`
+- Android Studio
+- Xcode + CocoaPods (for iOS on macOS)
+
+### Install
 
 ```sh
-# Using npm
-npm start
+yarn
+```
 
-# OR using Yarn
+### Start metro
+
+```sh
 yarn start
 ```
 
-## Step 2: Build and run your app
-
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
+### Run Android
 
 ```sh
-# Using npm
-npm run android
-
-# OR using Yarn
 yarn android
 ```
 
-### iOS
-
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+### Run iOS (macOS)
 
 ```sh
-bundle install
-```
-
-Then, and every time you update your native dependencies, run:
-
-```sh
-bundle exec pod install
-```
-
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
-
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
+cd ios && bundle exec pod install && cd ..
 yarn ios
 ```
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+### Reset metro cache
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+```sh
+yarn start --reset-cache
+```
 
-## Step 3: Modify your app
+## API Base URL
 
-Now that you have successfully run the app, let's make changes!
+Configured in `src/shared/constants/config.ts`.
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+- Android emulator: `http://10.0.2.2:5000/api/v1`
+- iOS simulator: `http://localhost:5000/api/v1`
+- Physical device: `http://<LAN_IP>:5000/api/v1`
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+## Font Setup
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+Configured in `react-native.config.js`:
 
-## Congratulations! :tada:
+- `assets: ['./src/assets/fonts']`
 
-You've successfully run and modified your React Native App. :partying_face:
+Expected Sora files:
 
-### Now what?
+- `Sora-Thin.ttf`
+- `Sora-ExtraLight.ttf`
+- `Sora-Light.ttf`
+- `Sora-Regular.ttf`
+- `Sora-Medium.ttf`
+- `Sora-SemiBold.ttf`
+- `Sora-Bold.ttf`
+- `Sora-ExtraBold.ttf`
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+If fonts do not appear:
 
-# Troubleshooting
+1. Rebuild native app.
+2. Reset metro cache.
+3. Re-run build.
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+## Reanimated Rule
 
-# Learn More
+In `babel.config.js`, keep this as the last plugin:
 
-To learn more about React Native, take a look at the following resources:
+- `react-native-worklets/plugin`
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+Do not place any plugin after it.
+
+## Quality Gate
+
+Before commit, run:
+
+```sh
+yarn lint
+yarn typecheck
+yarn test
+```
+
+No lint or type errors should be committed.
+
+## Planned Mobile Modules
+
+- Full OTP auth flow
+- Swipe shell (`react-native-tab-view` + `react-native-pager-view`) with custom floating tab bar
+- Feed / Bookmark module
+- Community module
+- Learning / My Course module
+- AI mentor + Message
+- Chat and notifications
+- Profile and privacy controls

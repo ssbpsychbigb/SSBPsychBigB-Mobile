@@ -1,9 +1,95 @@
 <resources>
-
-    <!-- Base application theme. -->
-    <style name="AppTheme" parent="Theme.AppCompat.DayNight.NoActionBar">
-        <!-- Customize your theme here. -->
+    <!--
+      Material 3 DayNight so MaterialDatePicker / DatePickerDialog
+      pick up BIGB brand colors (colorPrimary / calendar overlays).
+    -->
+    <style name="AppTheme" parent="Theme.Material3.DayNight.NoActionBar">
         <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
+
+        <!-- Core brand -->
+        <item name="colorPrimary">@color/bigb_primary</item>
+        <item name="colorOnPrimary">@color/bigb_on_primary</item>
+        <item name="colorPrimaryContainer">@color/bigb_primary_muted</item>
+        <item name="colorOnPrimaryContainer">@color/bigb_primary_dark</item>
+        <item name="colorSecondary">@color/bigb_primary</item>
+        <item name="colorOnSecondary">@color/bigb_on_primary</item>
+        <item name="colorSecondaryContainer">@color/bigb_primary_muted</item>
+        <item name="colorOnSecondaryContainer">@color/bigb_primary_dark</item>
+        <item name="colorTertiary">@color/bigb_primary</item>
+        <item name="colorOnTertiary">@color/bigb_on_primary</item>
+        <item name="android:colorBackground">@color/bigb_background</item>
+        <item name="colorSurface">@color/bigb_surface</item>
+        <item name="colorOnSurface">@color/bigb_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/bigb_on_surface_variant</item>
+        <item name="colorOutline">@color/bigb_outline</item>
+        <item name="colorAccent">@color/bigb_primary</item>
+        <item name="android:colorAccent">@color/bigb_primary</item>
+        <item name="colorControlActivated">@color/bigb_primary</item>
+        <item name="colorControlHighlight">@color/bigb_primary_muted</item>
+
+        <!-- Material 3 calendar (design=\"material\") -->
+        <item name="materialCalendarTheme">@style/ThemeOverlay.BigB.MaterialCalendar</item>
+        <item name="materialCalendarFullscreenTheme">@style/ThemeOverlay.BigB.MaterialCalendar.Fullscreen</item>
+
+        <!-- Legacy DatePickerDialog fallback (design=\"default\") -->
+        <item name="android:datePickerDialogTheme">@style/BigB.DatePickerDialog</item>
+        <item name="android:timePickerDialogTheme">@style/BigB.DatePickerDialog</item>
     </style>
 
+    <style name="ThemeOverlay.BigB.MaterialCalendar" parent="@style/ThemeOverlay.Material3.MaterialCalendar">
+        <item name="colorPrimary">@color/bigb_primary</item>
+        <item name="colorOnPrimary">@color/bigb_on_primary</item>
+        <item name="colorPrimaryContainer">@color/bigb_primary_muted</item>
+        <item name="colorOnPrimaryContainer">@color/bigb_primary_dark</item>
+        <item name="colorSurface">@color/bigb_background</item>
+        <item name="colorOnSurface">@color/bigb_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/bigb_on_surface_variant</item>
+        <item name="colorOutline">@color/bigb_outline</item>
+        <item name="materialCalendarStyle">@style/Widget.BigB.MaterialCalendar</item>
+    </style>
+
+    <style name="ThemeOverlay.BigB.MaterialCalendar.Fullscreen" parent="@style/ThemeOverlay.Material3.MaterialCalendar.Fullscreen">
+        <item name="colorPrimary">@color/bigb_primary</item>
+        <item name="colorOnPrimary">@color/bigb_on_primary</item>
+        <item name="colorPrimaryContainer">@color/bigb_primary_muted</item>
+        <item name="colorOnPrimaryContainer">@color/bigb_primary_dark</item>
+        <item name="colorSurface">@color/bigb_background</item>
+        <item name="colorOnSurface">@color/bigb_on_surface</item>
+        <item name="colorOnSurfaceVariant">@color/bigb_on_surface_variant</item>
+        <item name="colorOutline">@color/bigb_outline</item>
+    </style>
+
+    <style name="Widget.BigB.MaterialCalendar" parent="@style/Widget.Material3.MaterialCalendar">
+        <item name="daySelectedStyle">@style/Widget.BigB.MaterialCalendar.Day.Selected</item>
+        <item name="dayTodayStyle">@style/Widget.BigB.MaterialCalendar.Day.Today</item>
+    </style>
+
+    <style name="Widget.BigB.MaterialCalendar.Day.Selected" parent="@style/Widget.Material3.MaterialCalendar.Day.Selected">
+        <item name="itemFillColor">@color/bigb_primary</item>
+        <item name="itemTextColor">@color/bigb_on_primary</item>
+    </style>
+
+    <style name="Widget.BigB.MaterialCalendar.Day.Today" parent="@style/Widget.Material3.MaterialCalendar.Day.Today">
+        <item name="itemStrokeColor">@color/bigb_primary</item>
+        <item name="itemTextColor">@color/bigb_primary</item>
+    </style>
+
+    <style name="BigB.DatePickerDialog" parent="Theme.AppCompat.DayNight.Dialog">
+        <item name="colorAccent">@color/bigb_primary</item>
+        <item name="android:colorAccent">@color/bigb_primary</item>
+        <item name="colorPrimary">@color/bigb_primary</item>
+        <item name="colorControlActivated">@color/bigb_primary</item>
+        <item name="android:textColorPrimary">@color/bigb_on_surface</item>
+        <item name="android:textColorSecondary">@color/bigb_on_surface_variant</item>
+        <item name="android:buttonBarPositiveButtonStyle">@style/BigB.DialogButton.Positive</item>
+        <item name="android:buttonBarNegativeButtonStyle">@style/BigB.DialogButton.Negative</item>
+    </style>
+
+    <style name="BigB.DialogButton.Positive" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">@color/bigb_primary</item>
+    </style>
+
+    <style name="BigB.DialogButton.Negative" parent="Widget.AppCompat.Button.ButtonBar.AlertDialog">
+        <item name="android:textColor">@color/bigb_on_surface_variant</item>
+    </style>
 </resources>
