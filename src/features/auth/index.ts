@@ -3,6 +3,7 @@ export { usePermissionsStore } from './store/permissions.store';
 export { useAuthHydrated } from './hooks/useAuthHydrated';
 export { useAuthSessionReady } from './hooks/useAuthSessionReady';
 export { useLogout } from './hooks/useLogout';
+export { useOpenAuth } from './hooks/useOpenAuth';
 export { useRefreshAuthSession } from './hooks/useRefreshAuthSession';
 export { useSwitchEducatorProfile } from './hooks/useSwitchEducatorProfile';
 export { SplashScreen } from './screens/SplashScreen';
