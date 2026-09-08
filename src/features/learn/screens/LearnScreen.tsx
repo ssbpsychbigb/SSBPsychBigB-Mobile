@@ -4,6 +4,8 @@
 
 import { BookOpen } from 'lucide-react-native';
 
+import { GuestUnlockPanel } from '@/features/auth/components/GuestUnlockPanel';
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { ms } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
 import { ModulePlaceholder, Screen } from '@/shared/ui';
@@ -13,6 +15,17 @@ import { ModulePlaceholder, Screen } from '@/shared/ui';
  */
 export function LearnScreen() {
   const theme = useTheme();
+  const accessToken = useAuthStore((state) => state.accessToken);
+
+  if (!accessToken) {
+    return (
+      <GuestUnlockPanel
+        description="Courses, lessons, and progress tracking unlock after you create a BIGB account."
+        icon={<BookOpen color={theme.colors.primary} size={ms(32)} />}
+        title="Start learning as a member"
+      />
+    );
+  }
 
   return (
     <Screen safeBottom={false}>

@@ -34,6 +34,13 @@
         <!-- Legacy DatePickerDialog fallback (design=\"default\") -->
         <item name="android:datePickerDialogTheme">@style/BigB.DatePickerDialog</item>
         <item name="android:timePickerDialogTheme">@style/BigB.DatePickerDialog</item>
+
+        <!-- Edge-to-edge: screen canvas shows through the status bar. -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowDrawsSystemBarBackgrounds">true</item>
+        <item name="android:enforceStatusBarContrast">false</item>
+        <item name="android:windowLightStatusBar">true</item>
     </style>
 
     <style name="ThemeOverlay.BigB.MaterialCalendar" parent="@style/ThemeOverlay.Material3.MaterialCalendar">
