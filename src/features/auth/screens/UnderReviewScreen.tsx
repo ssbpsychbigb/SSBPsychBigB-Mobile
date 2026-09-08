@@ -9,10 +9,9 @@ import { useLogout } from '@/features/auth/hooks/useLogout';
 import { useRefreshAuthSession } from '@/features/auth/hooks/useRefreshAuthSession';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { labelRejectionFields } from '@/features/auth/lib/rejection-fields';
-import { APP_CONFIG } from '@/shared/constants/config';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Button, Screen } from '@/shared/ui';
+import { AppText, BrandLogo, Button, Screen, ScreenHeader } from '@/shared/ui';
 
 function formatWhen(value?: string): string | null {
   if (!value) {
@@ -61,7 +60,7 @@ export function UnderReviewScreen() {
       onRefresh={refreshSession}
       refreshing={refreshing}
       scroll>
-      <View style={styles.topBar}>
+      <ScreenHeader padded={false} style={styles.topBar}>
         <View style={styles.topBarSpacer} />
         <Pressable
           accessibilityLabel="Refresh status"
@@ -85,7 +84,7 @@ export function UnderReviewScreen() {
             <RefreshCw color={theme.colors.primary} size={ms(18)} strokeWidth={2.2} />
           )}
         </Pressable>
-      </View>
+      </ScreenHeader>
 
       <View
         style={[
@@ -95,9 +94,7 @@ export function UnderReviewScreen() {
         <Clock3 color={theme.colors.primary} size={ms(32)} />
       </View>
 
-      <AppText color="brand" style={styles.brand} variant="title">
-        {APP_CONFIG.appName}
-      </AppText>
+      <BrandLogo align="center" size="auth" />
       <AppText style={styles.heading} variant="subtitle">
         Under review
       </AppText>
@@ -160,15 +157,11 @@ function InfoRow({ label, value }: { label: string; value: string }) {
 
 const styles = StyleSheet.create({
   content: {
-    paddingTop: vs(8),
     paddingBottom: vs(40),
     gap: ms(12),
   },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'flex-end',
-    minHeight: ms(40),
   },
   topBarSpacer: {
     flex: 1,
@@ -189,10 +182,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
     marginBottom: vs(8),
-  },
-  brand: {
-    textAlign: 'center',
-    letterSpacing: 1,
   },
   heading: {
     textAlign: 'center',
