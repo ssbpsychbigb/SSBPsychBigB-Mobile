@@ -77,7 +77,7 @@ type ConfirmAction =
     };
 
 function isRealLeaveRequestId(id?: string): id is string {
-  return Boolean(id) && !id.startsWith('legacy-');
+  return typeof id === 'string' && id.length > 0 && !id.startsWith('legacy-');
 }
 
 /**
