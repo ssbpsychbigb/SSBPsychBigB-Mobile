@@ -74,7 +74,7 @@ export function buildRegisterFormData(values: RegisterFormValues): FormData {
     normalizeMobileNumber(values.mobileNumber),
   );
 
-  if (values.joinType === 'user') {
+  if (values.joinType === 'aspirant') {
     formData.append('fullName', values.fullName.trim());
     formData.append('examGoal', values.examGoal);
   }

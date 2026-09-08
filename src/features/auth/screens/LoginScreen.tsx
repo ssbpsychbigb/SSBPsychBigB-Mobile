@@ -23,10 +23,9 @@ import {
   normalizeMobileNumber,
 } from '@/features/auth/lib/format-mobile';
 import { useAuthStore } from '@/features/auth/store/auth.store';
-import { APP_CONFIG } from '@/shared/constants/config';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, BrandLogo, Screen, ScreenHeader } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 export type LoginScreenProps = NativeStackScreenProps<
@@ -91,9 +90,9 @@ export function LoginScreen({ navigation }: LoginScreenProps) {
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
         <View style={styles.content}>
-          <AppText color="brand" style={styles.brand} variant="title" weight="bold">
-            {APP_CONFIG.appName}
-          </AppText>
+          <ScreenHeader padded={false}>
+            <BrandLogo size="auth" />
+          </ScreenHeader>
 
           <View style={styles.body}>
             <AppText style={styles.headline} variant="title" weight="bold">
@@ -177,13 +176,8 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
     paddingHorizontal: s(24),
-    paddingTop: vs(16),
+    paddingTop: vs(4),
     paddingBottom: vs(28),
-  },
-  brand: {
-    letterSpacing: 1.2,
-    fontSize: fontSize(20),
-    lineHeight: lineHeight(20, 1.3),
   },
   body: {
     flex: 1,

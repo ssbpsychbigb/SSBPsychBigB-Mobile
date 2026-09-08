@@ -28,6 +28,8 @@ export async function apiRequest<T>(
     headers.set('Authorization', `Bearer ${options.token}`);
   }
 
+  headers.set('Accept', 'application/json');
+
   let body: BodyInit_ | undefined;
 
   if (options.formData) {

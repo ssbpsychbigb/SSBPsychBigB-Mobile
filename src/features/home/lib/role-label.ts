@@ -5,6 +5,7 @@
 import type { AuthRole } from '@/features/auth/types/auth.types';
 
 const ROLE_LABELS: Record<AuthRole, string> = {
+  user: 'Student',
   aspirant: 'Student',
   institute: 'Institute',
   institute_admin: 'Institute admin',
