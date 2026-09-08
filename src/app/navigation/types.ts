@@ -2,6 +2,8 @@
  * Typed navigation param lists for the whole app.
  */
 
+import type { NavigatorScreenParams } from '@react-navigation/native';
+
 import type { OtpPurpose, RegisterJoinTypeForOtp } from '@/features/auth/types/otp';
 
 export type AuthStackParamList = {
@@ -20,9 +22,9 @@ export type AuthStackParamList = {
 /** Swipe tab keys (react-native-tab-view + pager-view). */
 export type AppTabRouteKey =
   | 'homepage'
-  | 'bookmark'
+  | 'reels'
   | 'myCourse'
-  | 'message'
+  | 'communities'
   | 'profile';
 
 export type AppTabRoute = {
@@ -36,11 +38,17 @@ export type AppTabParamList = Record<AppTabRouteKey, undefined>;
 export type AppStackParamList = AppTabParamList;
 
 export type RootStackParamList = {
-  Auth: undefined;
+  Splash: undefined;
+  Auth: NavigatorScreenParams<AuthStackParamList> | undefined;
   UnderReview: undefined;
   ApplicationRejected: undefined;
   ApplicationResubmit: undefined;
   Restricted: undefined;
   Onboarding: undefined;
   App: undefined;
+  Workspace: undefined;
+  Bookmarks: undefined;
+  Network: undefined;
+  Messages: undefined;
+  Notifications: undefined;
 };

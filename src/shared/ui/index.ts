@@ -1,5 +1,14 @@
+export { BrandLogo } from './BrandLogo';
+export type { BrandLogoProps, BrandLogoSize } from './BrandLogo';
+
 export { Screen } from './Screen';
 export type { ScreenProps } from './Screen';
+
+export { ScreenHeader } from './ScreenHeader';
+export type { ScreenHeaderProps } from './ScreenHeader';
+
+export { ImmersiveStatusBar } from './ImmersiveStatusBar';
+export type { ImmersiveStatusBarProps } from './ImmersiveStatusBar';
 
 export { AppText } from './Text';
 export type { AppTextProps, AppTextVariant } from './Text';
@@ -21,6 +30,9 @@ export type { AppDateFieldProps } from './AppDateField';
 
 export { ModulePlaceholder } from './ModulePlaceholder';
 export type { ModulePlaceholderProps } from './ModulePlaceholder';
+
+export { SocialStackChrome } from './SocialStackChrome';
+export type { SocialStackChromeProps } from './SocialStackChrome';
 
 export {
   AppToastHost,

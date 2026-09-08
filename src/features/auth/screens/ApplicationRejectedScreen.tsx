@@ -17,10 +17,9 @@ import {
   type RejectionRole,
 } from '@/features/auth/lib/rejection-fields';
 import { useAuthStore } from '@/features/auth/store/auth.store';
-import { APP_CONFIG } from '@/shared/constants/config';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Button, Screen } from '@/shared/ui';
+import { AppText, BrandLogo, Button, Screen, ScreenHeader } from '@/shared/ui';
 
 export type ApplicationRejectedScreenProps = {
   onResubmit?: () => void;
@@ -57,7 +56,7 @@ export function ApplicationRejectedScreen({
       onRefresh={refreshSession}
       refreshing={refreshing}
       scroll>
-      <View style={styles.topBar}>
+      <ScreenHeader padded={false} style={styles.topBar}>
         <View style={styles.topBarSpacer} />
         <Pressable
           accessibilityLabel="Refresh status"
@@ -81,7 +80,7 @@ export function ApplicationRejectedScreen({
             <RefreshCw color={theme.colors.primary} size={ms(18)} strokeWidth={2.2} />
           )}
         </Pressable>
-      </View>
+      </ScreenHeader>
 
       <View
         style={[
@@ -91,9 +90,7 @@ export function ApplicationRejectedScreen({
         <CircleAlert color={theme.colors.danger} size={ms(32)} />
       </View>
 
-      <AppText color="brand" style={styles.brand} variant="title">
-        {APP_CONFIG.appName}
-      </AppText>
+      <BrandLogo align="center" size="auth" />
       <AppText style={styles.heading} variant="subtitle">
         Application not approved
       </AppText>
@@ -171,15 +168,11 @@ export type RejectedFlowDestination = Extract<
 
 const styles = StyleSheet.create({
   content: {
-    paddingTop: vs(8),
     paddingBottom: vs(40),
     gap: ms(12),
   },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'flex-end',
-    minHeight: ms(40),
   },
   topBarSpacer: {
     flex: 1,
@@ -200,10 +193,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignSelf: 'center',
     marginBottom: vs(8),
-  },
-  brand: {
-    textAlign: 'center',
-    letterSpacing: 1,
   },
   heading: {
     textAlign: 'center',
