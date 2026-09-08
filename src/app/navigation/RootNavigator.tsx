@@ -1,13 +1,14 @@
 /**
- * Root navigator — Auth / status locks / onboarding / App.
+ * Root navigator — public Feed shell, auth modal, status locks, onboarding.
  */
 
-import { useMemo, useState } from 'react';
-import { NavigationContainer, DefaultTheme, DarkTheme } from '@react-navigation/native';
+import { useEffect, useMemo, useState } from 'react';
+import { NavigationContainer, DefaultTheme, DarkTheme, useNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { View, StyleSheet } from 'react-native';
 
+import { AppLaunchSplash } from '@/app/navigation/AppLaunchSplash';
 import { AppNavigator } from '@/app/navigation/AppNavigator';
 import { AuthNavigator } from '@/app/navigation/AuthNavigator';
 import { PermissionGate } from '@/app/providers/PermissionGate';
@@ -23,6 +24,13 @@ import {
   useAuthStore,
 } from '@/features/auth';
 import { getPostAuthDestination } from '@/features/auth/lib/auth-routing';
+import { shouldShowLaunchSplash } from '@/features/auth/lib/auth-entry';
+import { HomeScreen } from '@/features/home';
+import { BookmarkScreen } from '@/features/bookmark';
+import { MessageScreen } from '@/features/message';
+import { NetworkScreen } from '@/features/network';
+import { NotificationsScreen } from '@/features/notifications';
+import { resolveFontFamily } from '@/shared/constants/fonts';
 import { useTheme } from '@/shared/theme';
 import { Spinner } from '@/shared/ui';
 
@@ -57,6 +65,14 @@ function ApplicationResubmitRoute({ navigation }: ResubmitProps) {
   );
 }
 
+function ModalAuthNavigator() {
+  return <AuthNavigator mode="modal" />;
+}
+
+function GateAuthNavigator() {
+  return <AuthNavigator mode="full" />;
+}
+
 /**
  * Top-level navigation gate with /auth/me refresh and status routing.
  */
@@ -66,17 +82,38 @@ export function RootNavigator() {
   const accessToken = useAuthStore((state) => state.accessToken);
   const user = useAuthStore((state) => state.user);
   const [onboardingTick, setOnboardingTick] = useState(0);
+  const navigationRef = useNavigationContainerRef<RootStackParamList>();
 
   const destination = useMemo(() => {
     void onboardingTick;
     if (!accessToken) {
-      return 'auth' as const;
+      return 'app' as const;
     }
 
     return getPostAuthDestination(user);
   }, [accessToken, user, onboardingTick]);
 
-  const navigationTheme = {
+  const appInitialRoute =
+    !accessToken && shouldShowLaunchSplash() ? 'Splash' : 'App';
+
+  useEffect(() => {
+    if (!sessionReady || !navigationRef.isReady()) {
+      return;
+    }
+    if (destination !== 'app' || !accessToken) {
+      return;
+    }
+    const rootState = navigationRef.getRootState();
+    const focusedRoot = rootState?.routes[rootState.index]?.name;
+    if (focusedRoot === 'Auth') {
+      navigationRef.reset({
+        index: 0,
+        routes: [{ name: 'App' }],
+      });
+    }
+  }, [accessToken, destination, navigationRef, sessionReady]);
+
+  const resolvedNavTheme = {
     ...(theme.mode === 'dark' ? DarkTheme : DefaultTheme),
     colors: {
       ...(theme.mode === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
@@ -96,12 +133,17 @@ export function RootNavigator() {
     <View style={styles.root}>
       <EmailVerificationHost />
       <View style={styles.navigator}>
-        <NavigationContainer theme={navigationTheme}>
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-          {destination === 'auth' ? (
-            <Stack.Screen component={AuthNavigator} name="Auth" />
-          ) : null}
-
+        <NavigationContainer ref={navigationRef} theme={resolvedNavTheme}>
+        <Stack.Navigator
+          initialRouteName={
+            destination === 'app' ? appInitialRoute : undefined
+          }
+          screenOptions={{
+            headerShown: false,
+            statusBarTranslucent: true,
+            statusBarBackgroundColor: 'transparent',
+            statusBarStyle: theme.mode === 'dark' ? 'light' : 'dark',
+          }}>
           {destination === 'underReview' ? (
             <Stack.Screen component={UnderReviewScreen} name="UnderReview" />
           ) : null}
@@ -136,8 +178,46 @@ export function RootNavigator() {
             </Stack.Screen>
           ) : null}
 
+          {destination === 'auth' ? (
+            <Stack.Screen component={GateAuthNavigator} name="Auth" />
+          ) : null}
+
           {destination === 'app' ? (
-            <Stack.Screen component={AppNavigator} name="App" />
+            <>
+              <Stack.Screen component={AppLaunchSplash} name="Splash" />
+              <Stack.Screen component={AppNavigator} name="App" />
+              <Stack.Screen component={BookmarkScreen} name="Bookmarks" />
+              <Stack.Screen component={NetworkScreen} name="Network" />
+              <Stack.Screen component={MessageScreen} name="Messages" />
+              <Stack.Screen
+                component={NotificationsScreen}
+                name="Notifications"
+              />
+              <Stack.Screen
+                component={HomeScreen}
+                name="Workspace"
+                options={{
+                  headerShown: true,
+                  title: 'Workspace',
+                  headerBackTitle: 'Feed',
+                  headerShadowVisible: false,
+                  headerTintColor: theme.colors.text,
+                  headerStyle: { backgroundColor: theme.colors.background },
+                  headerTitleStyle: {
+                    fontFamily: resolveFontFamily('semibold'),
+                    color: theme.colors.text,
+                  },
+                }}
+              />
+              <Stack.Screen
+                component={ModalAuthNavigator}
+                name="Auth"
+                options={{
+                  animation: 'slide_from_bottom',
+                  presentation: 'modal',
+                }}
+              />
+            </>
           ) : null}
         </Stack.Navigator>
       </NavigationContainer>
