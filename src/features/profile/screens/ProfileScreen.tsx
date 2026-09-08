@@ -1,15 +1,33 @@
 /**
- * Profile tab — account summary, profile switch, and session controls.
+ * Profile tab — guest join, account summary, workspace, session controls.
  */
 
-import { StyleSheet, View } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
-import { LogOut, Mail, Phone, Shield, UserRound } from 'lucide-react-native';
+import {
+  Bell,
+  Bookmark,
+  Briefcase,
+  Hash,
+  LogOut,
+  Mail,
+  MessageCircle,
+  Phone,
+  Shield,
+  UserRound,
+  Users,
+} from 'lucide-react-native';
 
+import { useAppTabs } from '@/app/navigation/AppTabsContext';
+import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import {
   getActiveInstituteProfile,
+  isFreelancerEducator,
+  isInstitutePanelUser,
   useAuthStore,
   useLogout,
+  useOpenAuth,
   useSwitchEducatorProfile,
 } from '@/features/auth';
 import { getRoleLabel } from '@/features/home/lib/role-label';
@@ -17,14 +35,19 @@ import { getUserInitials } from '@/features/home/lib/user-initials';
 import { APP_CONFIG } from '@/shared/constants/config';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Button, Screen } from '@/shared/ui';
+import { AppText, Button, Screen, ScreenHeader } from '@/shared/ui';
 
 /**
- * Signed-in profile overview with sign-out.
+ * Guest join surface or signed-in profile overview.
  */
 export function ProfileScreen() {
   const theme = useTheme();
+  const goRoot = useRootNavigate();
+  const { jumpTo } = useAppTabs();
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
+  const openRegister = useOpenAuth('Register');
+  const openLogin = useOpenAuth('Login');
   const logout = useLogout();
   const {
     canSwitchToFreelancer,
@@ -36,9 +59,73 @@ export function ProfileScreen() {
   const displayName = user?.fullName?.trim() || APP_CONFIG.appName;
   const initials = getUserInitials(user?.fullName);
   const examGoal = user?.examGoal || user?.examGoals?.join(', ');
+  const showWorkspace =
+    Boolean(user) &&
+    (isInstitutePanelUser(user) || isFreelancerEducator(user));
+
+  if (!accessToken) {
+    return (
+      <Screen contentStyle={styles.content} safeBottom={false} scroll>
+        <ScreenHeader padded={false}>
+          <AppText variant="subtitle" weight="bold">
+            Profile
+          </AppText>
+        </ScreenHeader>
+        <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
+          <View
+            style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
+            <UserRound color="#FFFFFF" size={ms(32)} strokeWidth={2} />
+          </View>
+          <AppText style={styles.name} variant="subtitle" weight="bold">
+            You
+          </AppText>
+          <AppText color="secondary" style={styles.guestLead} variant="body">
+            Join BIGB to follow officers, save posts, message mentors, and keep
+            your prep in one place. Public Reels are on the Reels tab. Network
+            and Community are open to browse now.
+          </AppText>
+        </Animated.View>
+        <View style={styles.section}>
+          <AppText color="muted" style={styles.sectionLabel} variant="caption">
+            Browse public
+          </AppText>
+          <View style={styles.discoverGrid}>
+            <DiscoverTile
+              icon={<Users color={theme.colors.primary} size={ms(18)} />}
+              label="Network"
+              onPress={() => goRoot('Network')}
+            />
+            <DiscoverTile
+              icon={<Hash color={theme.colors.primary} size={ms(18)} />}
+              label="Community"
+              onPress={() => jumpTo('communities')}
+            />
+            <DiscoverTile
+              icon={<MessageCircle color={theme.colors.primary} size={ms(18)} />}
+              label="Messages"
+              onPress={() => goRoot('Messages')}
+            />
+          </View>
+        </View>
+        <View style={styles.footer}>
+          <Button fullWidth onPress={openRegister}>
+            Join BIGB
+          </Button>
+          <Button fullWidth onPress={openLogin} variant="secondary">
+            Log in
+          </Button>
+        </View>
+      </Screen>
+    );
+  }
 
   return (
     <Screen contentStyle={styles.content} safeBottom={false} scroll>
+      <ScreenHeader padded={false}>
+        <AppText variant="subtitle" weight="bold">
+          You
+        </AppText>
+      </ScreenHeader>
       <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
         <View
           style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
@@ -66,6 +153,39 @@ export function ProfileScreen() {
           </AppText>
         ) : null}
       </Animated.View>
+
+      <View style={styles.section}>
+        <AppText color="muted" style={styles.sectionLabel} variant="caption">
+          Discover
+        </AppText>
+        <View style={styles.discoverGrid}>
+          <DiscoverTile
+            icon={<Bookmark color={theme.colors.primary} size={ms(18)} />}
+            label="Saved"
+            onPress={() => goRoot('Bookmarks')}
+          />
+          <DiscoverTile
+            icon={<Users color={theme.colors.primary} size={ms(18)} />}
+            label="Network"
+            onPress={() => goRoot('Network')}
+          />
+          <DiscoverTile
+            icon={<Hash color={theme.colors.primary} size={ms(18)} />}
+            label="Community"
+            onPress={() => jumpTo('communities')}
+          />
+          <DiscoverTile
+            icon={<MessageCircle color={theme.colors.primary} size={ms(18)} />}
+            label="Messages"
+            onPress={() => goRoot('Messages')}
+          />
+          <DiscoverTile
+            icon={<Bell color={theme.colors.primary} size={ms(18)} />}
+            label="Alerts"
+            onPress={() => goRoot('Notifications')}
+          />
+        </View>
+      </View>
 
       <View style={styles.section}>
         <AppText color="muted" style={styles.sectionLabel} variant="caption">
@@ -125,6 +245,17 @@ export function ProfileScreen() {
       </View>
 
       <View style={styles.footer}>
+        {showWorkspace ? (
+          <Button
+            fullWidth
+            onPress={() => goRoot('Workspace')}
+            variant="secondary">
+            <View style={styles.logoutRow}>
+              <Briefcase color={theme.colors.text} size={ms(18)} />
+              <AppText variant="label">Open workspace</AppText>
+            </View>
+          </Button>
+        ) : null}
         {canSwitchToFreelancer ? (
           <Button
             fullWidth
@@ -153,6 +284,35 @@ export function ProfileScreen() {
   );
 }
 
+type DiscoverTileProps = {
+  icon: ReactNode;
+  label: string;
+  onPress: () => void;
+};
+
+function DiscoverTile({ icon, label, onPress }: DiscoverTileProps) {
+  const theme = useTheme();
+
+  return (
+    <Pressable
+      accessibilityRole="button"
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.tile,
+        {
+          backgroundColor: theme.colors.surface,
+          borderColor: theme.colors.border,
+          opacity: pressed ? 0.88 : 1,
+        },
+      ]}>
+      {icon}
+      <AppText variant="caption" weight="semibold">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
 const styles = StyleSheet.create({
   content: {
     paddingBottom: vs(28),
@@ -161,7 +321,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: ms(10),
     marginBottom: vs(28),
-    marginTop: vs(8),
+    marginTop: 0,
   },
   avatar: {
     width: ms(72),
@@ -173,6 +333,10 @@ const styles = StyleSheet.create({
   },
   name: {
     textAlign: 'center',
+  },
+  guestLead: {
+    textAlign: 'center',
+    maxWidth: s(300),
   },
   roleBadge: {
     flexDirection: 'row',
@@ -192,6 +356,22 @@ const styles = StyleSheet.create({
     marginBottom: vs(8),
     textTransform: 'uppercase',
     letterSpacing: 0.6,
+  },
+  discoverGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: ms(8),
+  },
+  tile: {
+    width: '48%',
+    flexGrow: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: ms(8),
+    borderWidth: 1,
+    borderRadius: ms(14),
+    paddingHorizontal: s(12),
+    paddingVertical: vs(12),
   },
   panel: {
     borderWidth: 1,

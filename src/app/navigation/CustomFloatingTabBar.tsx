@@ -1,6 +1,6 @@
 /**
  * Custom floating bottom tab bar — flat white bar + elevated center FAB.
- * Used as `renderTabBar` for react-native-tab-view (pager-view swipe).
+ * Used as `renderTabBar` for react-native-tab-view.
  *
  * * FAB lift lives INSIDE the bar height (paddingTop) so Android does not clip it.
  */
@@ -9,10 +9,11 @@ import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
 import type { NavigationState } from 'react-native-tab-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  Bookmark,
+  Clapperboard,
   FileText,
+  Hash,
   Home,
-  MessageCircle,
+  UserRound,
 } from 'lucide-react-native';
 
 import type { AppTabRoute, AppTabRouteKey } from '@/app/navigation/types';
@@ -32,7 +33,8 @@ export const FAB_SIZE = ms(56);
 export type CustomFloatingTabBarProps = {
   navigationState: NavigationState<AppTabRoute>;
   jumpTo: (key: string) => void;
-  messageHasUnread?: boolean;
+  /** Hide the hairline above the bar (Reels full-bleed). */
+  hideTopEdge?: boolean;
 };
 
 type SideTabKey = Exclude<AppTabRouteKey, 'myCourse'>;
@@ -43,12 +45,13 @@ type SideTabKey = Exclude<AppTabRouteKey, 'myCourse'>;
 export function CustomFloatingTabBar({
   navigationState,
   jumpTo,
-  messageHasUnread = true,
+  hideTopEdge = false,
 }: CustomFloatingTabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
   const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore((state) => state.accessToken);
   const initials = getUserInitials(user?.fullName);
 
   const bottomPad = Math.max(insets.bottom, vs(8));
@@ -61,29 +64,20 @@ export function CustomFloatingTabBar({
     if (key === 'homepage') {
       return <Home color={color} size={ms(22)} strokeWidth={focused ? 2.5 : 2} />;
     }
-    if (key === 'bookmark') {
+    if (key === 'reels') {
       return (
-        <Bookmark color={color} size={ms(22)} strokeWidth={focused ? 2.5 : 2} />
+        <Clapperboard
+          color={color}
+          size={ms(22)}
+          strokeWidth={focused ? 2.5 : 2}
+        />
       );
     }
-    if (key === 'message') {
-      return (
-        <View style={styles.iconWrap}>
-          <MessageCircle
-            color={color}
-            size={ms(22)}
-            strokeWidth={focused ? 2.5 : 2}
-          />
-          {messageHasUnread ? (
-            <View
-              style={[styles.badge, { backgroundColor: theme.colors.danger }]}
-            />
-          ) : null}
-        </View>
-      );
+    if (key === 'communities') {
+      return <Hash color={color} size={ms(22)} strokeWidth={focused ? 2.5 : 2} />;
     }
 
-    return (
+    return accessToken ? (
       <View
         style={[
           styles.avatar,
@@ -104,6 +98,8 @@ export function CustomFloatingTabBar({
           {initials}
         </AppText>
       </View>
+    ) : (
+      <UserRound color={color} size={ms(22)} strokeWidth={focused ? 2.5 : 2} />
     );
   };
 
@@ -115,10 +111,11 @@ export function CustomFloatingTabBar({
       <View
         style={[
           styles.bar,
+          hideTopEdge ? styles.barFlush : null,
           {
             backgroundColor: theme.colors.background,
             paddingBottom: bottomPad,
-            borderTopColor: theme.colors.border,
+            borderTopColor: hideTopEdge ? 'transparent' : theme.colors.border,
           },
         ]}>
         <View style={[styles.row, { height: TAB_BAR_BASE_HEIGHT }]}>
@@ -195,6 +192,11 @@ const styles = StyleSheet.create({
     // Android
     elevation: ms(10),
   },
+  barFlush: {
+    borderTopWidth: 0,
+    shadowOpacity: 0,
+    elevation: 0,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-end',
@@ -209,9 +211,6 @@ const styles = StyleSheet.create({
     height: vs(26),
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  iconWrap: {
-    position: 'relative',
   },
   label: {
     fontSize: fontSize(11),
@@ -232,16 +231,6 @@ const styles = StyleSheet.create({
     shadowRadius: ms(10),
     elevation: ms(16),
     zIndex: 30,
-  },
-  badge: {
-    position: 'absolute',
-    top: vs(-1),
-    right: s(-3),
-    width: ms(8),
-    height: ms(8),
-    borderRadius: ms(4),
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
   },
   avatar: {
     width: ms(24),
