@@ -2,7 +2,10 @@
  * App-portal post-auth routing helpers (mobile parity with web auth-routing).
  */
 
-import type { AuthUser } from '@/features/auth/types/auth.types';
+import type {
+  AuthUser,
+  EducatorProfileSummary,
+} from '@/features/auth/types/auth.types';
 import { isOnboardingComplete } from '@/features/auth/lib/onboarding-storage';
 
 const BLOCKED_STATUSES = new Set(['suspended', 'banned', 'deleted']);
@@ -60,6 +63,23 @@ export function getActiveInstituteProfile(
   }
 
   return null;
+}
+
+/**
+ * Institute educator profiles the user can still enter.
+ */
+export function listEnterableInstituteProfiles(
+  user: AuthUser | null | undefined,
+): EducatorProfileSummary[] {
+  if (!user?.profiles?.length) {
+    return [];
+  }
+
+  return user.profiles.filter(
+    (row) =>
+      row.type === 'institute' &&
+      ENTERABLE_INSTITUTE_PROFILE_STATUSES.has(row.status),
+  );
 }
 
 /**
@@ -134,6 +154,17 @@ export function isFreelancerEducator(
   }
 
   return user.accountStatus === 'active';
+}
+
+/**
+ * Learner / aspirant consumer of the app portal.
+ */
+export function isLearnerUser(user: AuthUser | null | undefined): boolean {
+  if (!user) {
+    return false;
+  }
+
+  return user.role === 'user' || user.role === 'aspirant';
 }
 
 /**

@@ -51,7 +51,7 @@ import type { PickedAsset } from '@/features/auth/types/register-form';
 import { APP_CONFIG } from '@/shared/constants/config';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, BrandLogo, Screen, ScreenHeader } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 export type RegisterScreenProps = NativeStackScreenProps<
@@ -368,7 +368,7 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         style={styles.flex}>
-        <View style={styles.topBar}>
+        <ScreenHeader style={styles.topBar}>
           <Pressable
             accessibilityLabel="Back to login"
             accessibilityRole="button"
@@ -377,10 +377,8 @@ export function RegisterScreen({ navigation }: RegisterScreenProps) {
             style={styles.backBtn}>
             <ArrowLeft color={theme.colors.text} size={ms(20)} strokeWidth={1.9} />
           </Pressable>
-          <AppText color="brand" style={styles.brand} variant="title" weight="bold">
-            {APP_CONFIG.appName}
-          </AppText>
-        </View>
+          <BrandLogo size="auth" />
+        </ScreenHeader>
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
@@ -659,23 +657,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: ms(8),
-    paddingHorizontal: s(16),
-    paddingTop: vs(8),
-    paddingBottom: vs(4),
   },
   backBtn: {
     width: ms(36),
     height: ms(36),
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  brand: {
-    letterSpacing: 1.1,
-    fontSize: fontSize(18),
-    lineHeight: lineHeight(18, 24 / 18),
   },
   scrollContent: {
     paddingHorizontal: s(24),

@@ -5,7 +5,7 @@
 
 import type { AuthStackParamList } from '@/app/navigation/types';
 
-type AuthEntryRoute = keyof Pick<AuthStackParamList, 'Splash' | 'Login'>;
+type AuthEntryRoute = keyof Pick<AuthStackParamList, 'Splash' | 'Welcome' | 'Login'>;
 
 let preferAuthSplash = true;
 
@@ -21,6 +21,13 @@ export function getAuthInitialRoute(): AuthEntryRoute {
  */
 export function markAuthSplashComplete(): void {
   preferAuthSplash = false;
+}
+
+/**
+ * True until the cold-launch splash has played once this process.
+ */
+export function shouldShowLaunchSplash(): boolean {
+  return preferAuthSplash;
 }
 
 /**
