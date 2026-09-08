@@ -40,10 +40,9 @@ import { useLogout } from '@/features/auth/hooks/useLogout';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import type { PickedAsset } from '@/features/auth/types/register-form';
 import { ApiError } from '@/shared/api/types';
-import { APP_CONFIG } from '@/shared/constants/config';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Button, Screen } from '@/shared/ui';
+import { AppText, BrandLogo, Button, Screen } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 export type ApplicationResubmitScreenProps = {
@@ -281,9 +280,7 @@ export function ApplicationResubmitScreen({
         ]}>
         <FilePenLine color={theme.colors.primary} size={ms(28)} />
       </View>
-      <AppText color="brand" style={styles.brand} variant="title">
-        {APP_CONFIG.appName}
-      </AppText>
+      <BrandLogo align="center" size="auth" />
       <AppText style={styles.heading} variant="subtitle">
         Fix & resubmit
       </AppText>
@@ -492,7 +489,7 @@ export function ApplicationResubmitScreen({
 
 const styles = StyleSheet.create({
   content: {
-    paddingTop: vs(24),
+    paddingTop: vs(8),
     paddingBottom: vs(40),
     gap: ms(12),
   },
@@ -503,10 +500,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'center',
-  },
-  brand: {
-    textAlign: 'center',
-    letterSpacing: 1,
   },
   heading: {
     textAlign: 'center',
