@@ -1,9 +1,11 @@
 /**
- * Authenticated app shell — swipe tabs via react-native-tab-view + pager-view.
+ * Authenticated app shell — tab bar switches pages (swipe between tabs is off).
  */
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { SceneMap, TabView } from 'react-native-tab-view';
 
@@ -14,39 +16,43 @@ import {
   FAB_SIZE,
   TAB_BAR_BASE_HEIGHT,
 } from '@/app/navigation/CustomFloatingTabBar';
-import type { AppTabRoute, AppTabRouteKey } from '@/app/navigation/types';
-import { BookmarkScreen } from '@/features/bookmark';
-import { HomeScreen } from '@/features/home';
+import type { AppTabRoute, AppTabRouteKey, RootStackParamList } from '@/app/navigation/types';
+import { CommunitiesScreen } from '@/features/community';
+import { FeedScreen } from '@/features/feed';
 import { LearnScreen } from '@/features/learn';
-import { MessageScreen } from '@/features/message';
 import { ProfileScreen } from '@/features/profile';
+import { ReelsScreen } from '@/features/reels';
 import { vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
+import { ImmersiveStatusBar } from '@/shared/ui';
 
 const ROUTES: AppTabRoute[] = [
-  { key: 'homepage', title: 'Home' },
-  { key: 'bookmark', title: 'Bookmark' },
+  { key: 'homepage', title: 'Feed' },
+  { key: 'reels', title: 'Reels' },
   { key: 'myCourse', title: 'My Course' },
-  { key: 'message', title: 'Message' },
-  { key: 'profile', title: 'Profile' },
+  { key: 'communities', title: 'Community' },
+  { key: 'profile', title: 'You' },
 ];
 
 const renderScene = SceneMap({
-  homepage: HomeScreen,
-  bookmark: BookmarkScreen,
+  homepage: FeedScreen,
+  reels: ReelsScreen,
   myCourse: LearnScreen,
-  message: MessageScreen,
+  communities: CommunitiesScreen,
   profile: ProfileScreen,
 });
 
 /**
- * Signed-in experience with swipeable pages and overlay floating tab bar.
+ * Signed-in experience with overlay floating tab bar.
  * * Tab bar is outside TabView so Android does not clip the center FAB.
+ * * Horizontal swipe between tabs is disabled so nested lists (Feed, Reels) keep the gesture.
  */
 export function AppNavigator() {
   const theme = useTheme();
   const layout = useWindowDimensions();
   const insets = useSafeAreaInsets();
+  const navigation =
+    useNavigation<NativeStackNavigationProp<RootStackParamList, 'App'>>();
   const [index, setIndex] = useState(0);
 
   const jumpTo = useCallback((key: AppTabRouteKey) => {
@@ -60,16 +66,34 @@ export function AppNavigator() {
     () => ({
       index,
       jumpTo,
+      activeKey: ROUTES[index]?.key ?? 'homepage',
     }),
     [index, jumpTo],
   );
 
   const bottomChrome =
     FAB_LIFT + TAB_BAR_BASE_HEIGHT + Math.max(insets.bottom, vs(8));
+  const isReels = ROUTES[index]?.key === 'reels';
+
+  useLayoutEffect(() => {
+    navigation.setOptions({
+      contentStyle: {
+        backgroundColor: isReels ? '#000000' : theme.colors.background,
+      },
+      statusBarStyle: isReels || theme.mode === 'dark' ? 'light' : 'dark',
+      statusBarBackgroundColor: 'transparent',
+      statusBarTranslucent: true,
+    });
+  }, [isReels, navigation, theme.colors.background, theme.mode]);
 
   return (
     <AppTabsProvider value={tabsValue}>
-      <View style={[styles.root, { backgroundColor: theme.colors.background }]}>
+      <ImmersiveStatusBar lightIcons={isReels || theme.mode === 'dark'} />
+      <View
+        style={[
+          styles.root,
+          { backgroundColor: isReels ? '#000000' : theme.colors.background },
+        ]}>
         <View style={[styles.pagerWrap, { paddingBottom: bottomChrome - FAB_SIZE / 2 }]}>
           <TabView
             navigationState={{ index, routes: ROUTES }}
@@ -77,15 +101,15 @@ export function AppNavigator() {
             renderScene={renderScene}
             renderTabBar={() => null}
             initialLayout={{ width: layout.width }}
-            swipeEnabled
+            swipeEnabled={false}
             style={styles.tabView}
           />
         </View>
 
         <View pointerEvents="box-none" style={styles.tabBarOverlay}>
           <CustomFloatingTabBar
+            hideTopEdge={isReels}
             jumpTo={(key) => jumpTo(key as AppTabRouteKey)}
-            messageHasUnread
             navigationState={{ index, routes: ROUTES }}
           />
         </View>

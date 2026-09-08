@@ -35,6 +35,8 @@ jest.mock('react-native-mmkv', () => ({
 
 jest.mock('react-native-nitro-modules', () => ({}));
 
+jest.mock('react-native-video', () => 'Video');
+
 jest.mock('react-native-toast-message', () => ({
   __esModule: true,
   default: {

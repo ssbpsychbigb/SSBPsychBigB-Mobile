@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { useScreenTopPadding } from '@/shared/lib/safe-area';
 import { useTheme } from '@/shared/theme';
 
 export type ScreenProps = {
@@ -30,6 +31,7 @@ export type ScreenProps = {
 
 /**
  * Full-screen layout that respects safe areas and theme background.
+ * * Top inset is applied last so caller `style` cannot collapse it under the status bar.
  */
 export function Screen({
   children,
@@ -44,33 +46,39 @@ export function Screen({
 }: ScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const topPadding = useScreenTopPadding();
 
   const containerStyle: ViewStyle = {
     flex: 1,
     backgroundColor: theme.colors.background,
-    paddingTop: safeTop ? insets.top : 0,
     paddingBottom: safeBottom ? insets.bottom : 0,
     paddingLeft: insets.left,
     paddingRight: insets.right,
-    ...style,
   };
 
   const bodyStyle: ViewStyle = {
     ...(padded
       ? {
           paddingHorizontal: theme.spacing.lg,
-          paddingVertical: theme.spacing.lg,
+          paddingBottom: theme.spacing.lg,
         }
       : {}),
     ...contentStyle,
   };
 
+  const frameStyle = [
+    containerStyle,
+    style,
+    safeTop ? { paddingTop: topPadding } : null,
+  ];
+
   if (scroll) {
     return (
-      <View style={containerStyle}>
+      <View style={frameStyle}>
         <ScrollView
           contentContainerStyle={bodyStyle}
           keyboardShouldPersistTaps="handled"
+          nestedScrollEnabled
           refreshControl={
             onRefresh ? (
               <RefreshControl
@@ -90,5 +98,5 @@ export function Screen({
     );
   }
 
-  return <View style={[containerStyle, bodyStyle]}>{children}</View>;
+  return <View style={[frameStyle, bodyStyle]}>{children}</View>;
 }
