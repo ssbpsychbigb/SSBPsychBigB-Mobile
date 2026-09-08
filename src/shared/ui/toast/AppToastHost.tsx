@@ -2,11 +2,11 @@
  * Root toast host — mount once near the app root (above screens).
  */
 
-import { Platform, StatusBar } from 'react-native';
 import Toast from 'react-native-toast-message';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { ms, vs } from '@/shared/lib/responsive';
+import { vs } from '@/shared/lib/responsive';
+import { useScreenTopPadding } from '@/shared/lib/safe-area';
 import { toastConfig } from '@/shared/ui/toast/toastConfig';
 
 /**
@@ -14,17 +14,14 @@ import { toastConfig } from '@/shared/ui/toast/toastConfig';
  */
 export function AppToastHost() {
   const insets = useSafeAreaInsets();
-
-  const statusBarFallback =
-    Platform.OS === 'android' ? StatusBar.currentHeight ?? 24 : 44;
-  const topInset = insets.top > 0 ? insets.top : statusBarFallback;
+  const topOffset = useScreenTopPadding(vs(4));
 
   return (
     <Toast
       bottomOffset={Math.max(insets.bottom, vs(12)) + vs(72)}
       config={toastConfig}
       position="top"
-      topOffset={topInset + ms(6)}
+      topOffset={topOffset}
       visibilityTime={2800}
     />
   );

@@ -3,11 +3,10 @@
  */
 
 import { useEffect } from 'react';
-import { Pressable, StatusBar, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Animated, {
-  FadeIn,
   FadeInDown,
   FadeInUp,
   useAnimatedStyle,
@@ -17,7 +16,7 @@ import Animated, {
   withSequence,
   withTiming,
 } from 'react-native-reanimated';
-import { ArrowRight, Shield } from 'lucide-react-native';
+import { ArrowRight, X } from 'lucide-react-native';
 
 import type { AuthStackParamList } from '@/app/navigation/types';
 import { APP_CONFIG } from '@/shared/constants/config';
@@ -25,7 +24,7 @@ import { FEATURE_FLAGS } from '@/shared/constants/feature-flags';
 import { resolveFontFamily } from '@/shared/constants/fonts';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Screen } from '@/shared/ui';
+import { AppText, BrandLogo, ImmersiveStatusBar, Screen, ScreenHeader } from '@/shared/ui';
 import { showToast } from '@/shared/ui/toast';
 
 export type WelcomeScreenProps = NativeStackScreenProps<
@@ -39,18 +38,9 @@ export type WelcomeScreenProps = NativeStackScreenProps<
 export function WelcomeScreen({ navigation }: WelcomeScreenProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const ringPulse = useSharedValue(1);
   const glowOpacity = useSharedValue(0.35);
 
   useEffect(() => {
-    ringPulse.value = withRepeat(
-      withSequence(
-        withTiming(1.06, { duration: 1600 }),
-        withTiming(1, { duration: 1600 }),
-      ),
-      -1,
-      false,
-    );
     glowOpacity.value = withDelay(
       200,
       withRepeat(
@@ -62,11 +52,7 @@ export function WelcomeScreen({ navigation }: WelcomeScreenProps) {
         false,
       ),
     );
-  }, [glowOpacity, ringPulse]);
-
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: ringPulse.value }],
-  }));
+  }, [glowOpacity]);
 
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
@@ -74,10 +60,7 @@ export function WelcomeScreen({ navigation }: WelcomeScreenProps) {
 
   return (
     <Screen padded={false} style={styles.screen}>
-      <StatusBar
-        backgroundColor={theme.colors.background}
-        barStyle={theme.mode === 'dark' ? 'light-content' : 'dark-content'}
-      />
+      <ImmersiveStatusBar />
 
       {/* Soft brand atmosphere — not flat white. */}
       <View pointerEvents="none" style={StyleSheet.absoluteFill}>
@@ -112,42 +95,26 @@ export function WelcomeScreen({ navigation }: WelcomeScreenProps) {
         style={[
           styles.content,
           {
-            paddingTop: Math.max(insets.top, vs(16)) + vs(12),
+            paddingTop: 0,
             paddingBottom: Math.max(insets.bottom, vs(16)) + vs(20),
           },
         ]}>
+        {navigation.getParent()?.canGoBack() ? (
+          <ScreenHeader padded={false} style={styles.closeRow}>
+            <Pressable
+              accessibilityLabel="Close"
+              accessibilityRole="button"
+              hitSlop={ms(10)}
+              onPress={() => navigation.getParent()?.goBack()}
+              style={styles.closeBtn}>
+              <X color={theme.colors.text} size={ms(22)} strokeWidth={2} />
+            </Pressable>
+          </ScreenHeader>
+        ) : null}
         <Animated.View
           entering={FadeInDown.duration(650)}
           style={styles.hero}>
-          <View style={styles.emblemStage}>
-            <Animated.View
-              style={[
-                styles.pulseRing,
-                ringStyle,
-                { borderColor: theme.palette.primary[200] },
-              ]}
-            />
-            <Animated.View
-              entering={FadeIn.delay(120).duration(500)}
-              style={[
-                styles.emblem,
-                {
-                  backgroundColor: theme.colors.background,
-                  borderColor: theme.palette.primary[200],
-                  shadowColor: theme.colors.primary,
-                },
-              ]}>
-              <Shield
-                color={theme.colors.primary}
-                size={ms(40)}
-                strokeWidth={1.85}
-              />
-            </Animated.View>
-          </View>
-
-          <AppText color="brand" style={styles.brand} variant="display">
-            {APP_CONFIG.appName}
-          </AppText>
+          <BrandLogo align="center" size="hero" style={{ marginBottom: vs(4) }} />
           <AppText color="secondary" style={styles.tagline} variant="body">
             Elite social infrastructure for SSB aspirants
           </AppText>
@@ -273,44 +240,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: s(28),
     justifyContent: 'space-between',
   },
+  closeRow: {
+    justifyContent: 'flex-end',
+    minHeight: vs(48),
+  },
+  closeBtn: {
+    alignSelf: 'flex-end',
+    width: ms(40),
+    height: ms(40),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   hero: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     paddingBottom: vs(24),
-  },
-  emblemStage: {
-    width: s(140),
-    height: s(140),
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: vs(28),
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: s(132),
-    height: s(132),
-    borderRadius: ms(66),
-    borderWidth: 1.5,
-  },
-  emblem: {
-    width: ms(96),
-    height: ms(96),
-    borderRadius: ms(28),
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: vs(12) },
-    shadowOpacity: 0.18,
-    shadowRadius: ms(24),
-    elevation: ms(8),
-  },
-  brand: {
-    letterSpacing: 3,
-    fontSize: fontSize(32),
-    lineHeight: lineHeight(32, 1.15),
-    fontFamily: resolveFontFamily('extraBold'),
-    textAlign: 'center',
   },
   tagline: {
     marginTop: vs(14),
