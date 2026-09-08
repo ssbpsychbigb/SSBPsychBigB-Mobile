@@ -4,10 +4,10 @@
 
 import { Pressable, StyleSheet, View } from 'react-native';
 import { MailWarning } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { maskEmail } from '@/features/auth/lib/mask-email';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
+import { useScreenTopPadding } from '@/shared/lib/safe-area';
 import { useTheme } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
 
@@ -24,14 +24,14 @@ export function EmailVerificationBanner({
   onVerify,
 }: EmailVerificationBannerProps) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
+  const topPad = useScreenTopPadding(vs(4));
 
   return (
     <View
       style={[
         styles.root,
         {
-          paddingTop: Math.max(insets.top, vs(8)),
+          paddingTop: topPad,
           backgroundColor: theme.palette.warning[50],
           borderBottomColor: theme.palette.warning[200],
         },
