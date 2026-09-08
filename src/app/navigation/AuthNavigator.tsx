@@ -17,22 +17,27 @@ import { useTheme } from '@/shared/theme';
 
 const Stack = createNativeStackNavigator<AuthStackParamList>();
 
+export type AuthNavigatorProps = {
+  /** `modal` skips splash — used from the public Feed shell. */
+  mode?: 'full' | 'modal';
+};
+
 /**
- * Auth flow: Splash (cold launch only) → Welcome → Login / Register → Otp.
- * After sign-out, stack remounts on Login.
+ * Auth flow: Splash (gate only) → Welcome → Login / Register → Otp.
  */
-export function AuthNavigator() {
+export function AuthNavigator({ mode = 'full' }: AuthNavigatorProps) {
   const theme = useTheme();
+  const initialRouteName = mode === 'modal' ? 'Welcome' : getAuthInitialRoute();
 
   return (
     <Stack.Navigator
-      initialRouteName={getAuthInitialRoute()}
+      initialRouteName={initialRouteName}
       screenOptions={{
         headerShown: false,
         contentStyle: { backgroundColor: theme.colors.background },
         animation: 'slide_from_right',
       }}>
-      <Stack.Screen component={SplashScreen} name="Splash" />
+      {mode === 'full' ? <Stack.Screen component={SplashScreen} name="Splash" /> : null}
       <Stack.Screen component={WelcomeScreen} name="Welcome" />
       <Stack.Screen component={LoginScreen} name="Login" />
       <Stack.Screen component={RegisterScreen} name="Register" />
