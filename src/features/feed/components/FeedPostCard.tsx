@@ -43,6 +43,7 @@ export type FeedPostCardProps = {
   onSave: () => void;
   onFollow: () => void;
   onMenu: () => void;
+  onAuthorPress?: () => void;
 };
 
 /**
@@ -58,6 +59,7 @@ export function FeedPostCard({
   onSave,
   onFollow,
   onMenu,
+  onAuthorPress,
 }: FeedPostCardProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
@@ -75,18 +77,24 @@ export function FeedPostCard({
         },
       ]}>
       <View style={styles.header}>
-        <View
-          style={[styles.avatar, { backgroundColor: post.author.avatarColor }]}>
-          <AppText color="inverse" variant="caption" weight="semibold">
-            {post.author.initials}
-          </AppText>
-        </View>
-
-        <View style={styles.identity}>
-          <View style={styles.nameRow}>
-            <AppText numberOfLines={1} style={styles.name} variant="label">
-              {post.author.name}
+        <Pressable
+          accessibilityLabel={`${post.author.name} profile`}
+          accessibilityRole="link"
+          disabled={!onAuthorPress}
+          onPress={onAuthorPress}
+          style={styles.identityHit}>
+          <View
+            style={[styles.avatar, { backgroundColor: post.author.avatarColor }]}>
+            <AppText color="inverse" variant="caption" weight="semibold">
+              {post.author.initials}
             </AppText>
+          </View>
+
+          <View style={styles.identity}>
+            <View style={styles.nameRow}>
+              <AppText numberOfLines={1} style={styles.name} variant="label">
+                {post.author.name}
+              </AppText>
             {post.author.verified ? (
               <View style={styles.verified}>
                 <BadgeCheck
@@ -121,17 +129,32 @@ export function FeedPostCard({
             </View>
           </View>
         </View>
+        </Pressable>
 
         <View style={styles.headerActions}>
-          <Pressable
-            accessibilityLabel="Follow"
-            accessibilityRole="button"
-            onPress={onFollow}
-            style={[styles.follow, { borderColor: theme.colors.primary }]}>
-            <AppText color="brand" style={styles.followLabel} variant="caption" weight="semibold">
-              Follow
-            </AppText>
-          </Pressable>
+          {!post.isOwn ? (
+            <Pressable
+              accessibilityLabel={post.followingAuthor ? 'Following' : 'Follow'}
+              accessibilityRole="button"
+              onPress={onFollow}
+              style={[
+                styles.follow,
+                {
+                  borderColor: theme.colors.primary,
+                  backgroundColor: post.followingAuthor
+                    ? theme.colors.primaryMuted
+                    : 'transparent',
+                },
+              ]}>
+              <AppText
+                color="brand"
+                style={styles.followLabel}
+                variant="caption"
+                weight="semibold">
+                {post.followingAuthor ? 'Following' : 'Follow'}
+              </AppText>
+            </Pressable>
+          ) : null}
           <Pressable
             accessibilityLabel="More"
             accessibilityRole="button"
@@ -249,6 +272,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: s(14),
+  },
+  identityHit: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    minWidth: 0,
   },
   avatar: {
     width: ms(40),

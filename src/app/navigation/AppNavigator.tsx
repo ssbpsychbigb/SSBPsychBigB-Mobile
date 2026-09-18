@@ -1,5 +1,5 @@
 /**
- * Authenticated app shell — tab bar switches pages (swipe between tabs is off).
+ * Authenticated app shell — tabs + swipe between Feed, Reels, Course, Community, You.
  */
 
 import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
@@ -45,7 +45,7 @@ const renderScene = SceneMap({
 /**
  * Signed-in experience with overlay floating tab bar.
  * * Tab bar is outside TabView so Android does not clip the center FAB.
- * * Horizontal swipe between tabs is disabled so nested lists (Feed, Reels) keep the gesture.
+ * * Swipe stays on so Android pager actually changes page with the tab highlight.
  */
 export function AppNavigator() {
   const theme = useTheme();
@@ -54,12 +54,19 @@ export function AppNavigator() {
   const navigation =
     useNavigation<NativeStackNavigationProp<RootStackParamList, 'App'>>();
   const [index, setIndex] = useState(0);
+  const [reelsPlayerOpen, setReelsPlayerOpen] = useState(false);
+  const [reelComposeNonce, setReelComposeNonce] = useState(0);
 
   const jumpTo = useCallback((key: AppTabRouteKey) => {
     const next = ROUTES.findIndex((route) => route.key === key);
     if (next >= 0) {
+      setReelsPlayerOpen(false);
       setIndex(next);
     }
+  }, []);
+
+  const requestReelCompose = useCallback(() => {
+    setReelComposeNonce((value) => value + 1);
   }, []);
 
   const tabsValue = useMemo(
@@ -67,52 +74,67 @@ export function AppNavigator() {
       index,
       jumpTo,
       activeKey: ROUTES[index]?.key ?? 'homepage',
+      reelsPlayerOpen,
+      setReelsPlayerOpen,
+      reelComposeNonce,
+      requestReelCompose,
     }),
-    [index, jumpTo],
+    [index, jumpTo, reelComposeNonce, reelsPlayerOpen, requestReelCompose],
   );
 
   const bottomChrome =
     FAB_LIFT + TAB_BAR_BASE_HEIGHT + Math.max(insets.bottom, vs(8));
-  const isReels = ROUTES[index]?.key === 'reels';
+  const isReelsTab = ROUTES[index]?.key === 'reels';
+  const immersiveReels = isReelsTab && reelsPlayerOpen;
 
   useLayoutEffect(() => {
     navigation.setOptions({
       contentStyle: {
-        backgroundColor: isReels ? '#000000' : theme.colors.background,
+        backgroundColor: immersiveReels ? '#000000' : theme.colors.background,
       },
-      statusBarStyle: isReels || theme.mode === 'dark' ? 'light' : 'dark',
+      statusBarStyle: immersiveReels || theme.mode === 'dark' ? 'light' : 'dark',
       statusBarBackgroundColor: 'transparent',
       statusBarTranslucent: true,
     });
-  }, [isReels, navigation, theme.colors.background, theme.mode]);
+  }, [immersiveReels, navigation, theme.colors.background, theme.mode]);
 
   return (
     <AppTabsProvider value={tabsValue}>
-      <ImmersiveStatusBar lightIcons={isReels || theme.mode === 'dark'} />
+      <ImmersiveStatusBar lightIcons={immersiveReels || theme.mode === 'dark'} />
       <View
         style={[
           styles.root,
-          { backgroundColor: isReels ? '#000000' : theme.colors.background },
+          { backgroundColor: immersiveReels ? '#000000' : theme.colors.background },
         ]}>
-        <View style={[styles.pagerWrap, { paddingBottom: bottomChrome - FAB_SIZE / 2 }]}>
+        <View
+          style={[
+            styles.pagerWrap,
+            { paddingBottom: immersiveReels ? 0 : bottomChrome - FAB_SIZE / 2 },
+          ]}>
           <TabView
+            animationEnabled
+            initialLayout={{ width: layout.width, height: layout.height }}
             navigationState={{ index, routes: ROUTES }}
-            onIndexChange={setIndex}
+            onIndexChange={(next) => {
+              setReelsPlayerOpen(false);
+              setIndex(next);
+            }}
             renderScene={renderScene}
             renderTabBar={() => null}
-            initialLayout={{ width: layout.width }}
-            swipeEnabled={false}
             style={styles.tabView}
+            swipeEnabled
           />
         </View>
 
-        <View pointerEvents="box-none" style={styles.tabBarOverlay}>
-          <CustomFloatingTabBar
-            hideTopEdge={isReels}
-            jumpTo={(key) => jumpTo(key as AppTabRouteKey)}
-            navigationState={{ index, routes: ROUTES }}
-          />
-        </View>
+        {immersiveReels ? null : (
+          <View pointerEvents="box-none" style={styles.tabBarOverlay}>
+            <CustomFloatingTabBar
+              hideTopEdge={false}
+              jumpTo={(key) => jumpTo(key as AppTabRouteKey)}
+              navigationState={{ index, routes: ROUTES }}
+            />
+          </View>
+        )}
       </View>
     </AppTabsProvider>
   );

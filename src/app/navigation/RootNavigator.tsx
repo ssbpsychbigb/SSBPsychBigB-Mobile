@@ -27,9 +27,10 @@ import { getPostAuthDestination } from '@/features/auth/lib/auth-routing';
 import { shouldShowLaunchSplash } from '@/features/auth/lib/auth-entry';
 import { HomeScreen } from '@/features/home';
 import { BookmarkScreen } from '@/features/bookmark';
-import { MessageScreen } from '@/features/message';
+import { MessageScreen, ChatThreadScreen } from '@/features/message';
 import { NetworkScreen } from '@/features/network';
 import { NotificationsScreen } from '@/features/notifications';
+import { MemberProfileScreen, MemberNetworkScreen } from '@/features/profile';
 import { resolveFontFamily } from '@/shared/constants/fonts';
 import { useTheme } from '@/shared/theme';
 import { Spinner } from '@/shared/ui';
@@ -189,6 +190,9 @@ export function RootNavigator() {
               <Stack.Screen component={BookmarkScreen} name="Bookmarks" />
               <Stack.Screen component={NetworkScreen} name="Network" />
               <Stack.Screen component={MessageScreen} name="Messages" />
+              <Stack.Screen component={ChatThreadScreen} name="ChatThread" />
+              <Stack.Screen component={MemberProfileScreen} name="MemberProfile" />
+              <Stack.Screen component={MemberNetworkScreen} name="MemberNetwork" />
               <Stack.Screen
                 component={NotificationsScreen}
                 name="Notifications"

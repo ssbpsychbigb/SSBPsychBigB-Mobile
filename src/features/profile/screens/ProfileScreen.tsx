@@ -32,6 +32,7 @@ import {
 } from '@/features/auth';
 import { getRoleLabel } from '@/features/home/lib/role-label';
 import { getUserInitials } from '@/features/home/lib/user-initials';
+import { requireMemberProfileParams } from '@/features/profile/lib/require-member-profile';
 import { APP_CONFIG } from '@/shared/constants/config';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
@@ -151,6 +152,20 @@ export function ProfileScreen() {
           <AppText color="secondary" style={styles.contextHint} variant="caption">
             Currently in {activeInstitute.instituteName || 'institute'} mode
           </AppText>
+        ) : null}
+        {user?.username ? (
+          <Pressable
+            onPress={() => {
+              const params = requireMemberProfileParams(user.username, user.fullName);
+              if (params) {
+                goRoot('MemberProfile', params);
+              }
+            }}
+            style={styles.publicLink}>
+            <AppText color="brand" variant="caption" weight="semibold">
+              View public profile
+            </AppText>
+          </Pressable>
         ) : null}
       </Animated.View>
 
@@ -348,6 +363,9 @@ const styles = StyleSheet.create({
   },
   contextHint: {
     textAlign: 'center',
+  },
+  publicLink: {
+    marginTop: vs(8),
   },
   section: {
     marginBottom: vs(24),

@@ -1,14 +1,16 @@
 /**
- * Inlines allowlisted keys from the single gitignored `.env` at bundle time.
+ * Inlines allowlisted keys from `.env` plus this PC's LAN IP (debug API host).
  */
 
 const fs = require('fs');
 const path = require('path');
+const { pickLanHost } = require('./lan-host');
 
 const ROOT = path.join(__dirname, '..');
 const ALLOWLIST = new Set([
   'API_BASE_URL_LOCAL',
   'API_BASE_URL_PRODUCTION',
+  'DEV_LAN_HOST',
 ]);
 
 /**
@@ -52,7 +54,9 @@ function parseEnvFile(filePath) {
  * @returns {Record<string, string>}
  */
 function loadEnv() {
-  return parseEnvFile(path.join(ROOT, '.env'));
+  const env = parseEnvFile(path.join(ROOT, '.env'));
+  env.DEV_LAN_HOST = env.DEV_LAN_HOST || pickLanHost();
+  return env;
 }
 
 /**

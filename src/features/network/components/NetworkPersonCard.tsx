@@ -2,13 +2,14 @@
  * Network person card — elevated profile tile with follow state.
  */
 
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { BadgeCheck, Users } from 'lucide-react-native';
 
 import {
   NETWORK_KIND_LABEL,
   type NetworkPersonPreview,
 } from '@/features/network/data/network-preview';
+import { followCtaLabel } from '@/features/network/lib/network-display';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
@@ -18,6 +19,7 @@ export type NetworkPersonCardProps = {
   following: boolean;
   featured?: boolean;
   onFollow: () => void;
+  onPressProfile?: () => void;
 };
 
 /**
@@ -28,10 +30,15 @@ export function NetworkPersonCard({
   following,
   featured = false,
   onFollow,
+  onPressProfile,
 }: NetworkPersonCardProps) {
   const theme = useTheme();
   const surface = theme.colors.background;
   const kindLabel = NETWORK_KIND_LABEL[person.kind];
+  const cta = followCtaLabel(
+    Boolean(person.followingAuthor) || following,
+    Boolean(person.followsYou),
+  );
 
   return (
     <View
@@ -45,7 +52,12 @@ export function NetworkPersonCard({
       ]}>
       <View style={[styles.accent, { backgroundColor: person.color }]} />
 
-      <View style={featured ? styles.heroBody : styles.body}>
+      <Pressable
+        accessibilityLabel={`${person.name} profile`}
+        accessibilityRole="link"
+        disabled={!onPressProfile}
+        onPress={onPressProfile}
+        style={featured ? styles.heroBody : styles.body}>
         <View
           style={[
             styles.avatarRing,
@@ -66,12 +78,16 @@ export function NetworkPersonCard({
                 borderRadius: featured ? ms(31) : ms(24),
               },
             ]}>
-            <AppText
-              color="inverse"
-              style={featured ? styles.heroInitials : styles.initials}
-              weight="bold">
-              {person.initials}
-            </AppText>
+              {person.photoUri ? (
+                <Image source={{ uri: person.photoUri }} style={styles.photo} />
+              ) : (
+                <AppText
+                  color="inverse"
+                  style={featured ? styles.heroInitials : styles.initials}
+                  weight="bold">
+                  {person.initials}
+                </AppText>
+              )}
           </View>
         </View>
 
@@ -113,7 +129,7 @@ export function NetworkPersonCard({
             </AppText>
           </View>
         </View>
-      </View>
+      </Pressable>
 
       {!featured ? (
         <Pressable
@@ -138,7 +154,7 @@ export function NetworkPersonCard({
             style={styles.followLabel}
             variant="caption"
             weight="semibold">
-            {following ? 'Following' : 'Follow'}
+            {cta}
           </AppText>
         </Pressable>
       ) : (
@@ -164,7 +180,7 @@ export function NetworkPersonCard({
             style={styles.followLabel}
             variant="caption"
             weight="semibold">
-            {following ? 'Following' : 'Follow'}
+            {cta}
           </AppText>
         </Pressable>
       )}
@@ -231,6 +247,11 @@ const styles = StyleSheet.create({
   avatar: {
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
   },
   initials: {
     fontSize: fontSize(13),

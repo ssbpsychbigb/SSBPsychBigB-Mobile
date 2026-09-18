@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import {
   Bookmark,
+  Camera,
+  ChevronLeft,
   Heart,
   MessageCircle,
   Music2,
@@ -48,6 +50,10 @@ export type ReelStageProps = {
   onOpenMessages: () => void;
   userPaused: boolean;
   onTogglePause: () => void;
+  /** Back to the explore grid. */
+  onClose?: () => void;
+  onCreate?: () => void;
+  onAuthorPress?: () => void;
 };
 
 /**
@@ -71,6 +77,9 @@ export function ReelStage({
   onOpenMessages,
   userPaused,
   onTogglePause,
+  onClose,
+  onCreate,
+  onAuthorPress,
 }: ReelStageProps) {
   const topPad = useScreenTopPadding(vs(4));
   const [captionOpen, setCaptionOpen] = useState(false);
@@ -96,7 +105,7 @@ export function ReelStage({
         pointerEvents="none"
         repeat
         resizeMode="cover"
-        source={getReelVideoSource(reel.video)}
+        source={getReelVideoSource(reel)}
         style={{ width, height }}
       />
 
@@ -116,10 +125,32 @@ export function ReelStage({
         <View
           pointerEvents="box-none"
           style={[styles.topBar, { paddingTop: topPad }]}>
-          <AppText color="inverse" style={styles.reelsTitle} variant="subtitle" weight="bold">
-            Reels
-          </AppText>
+          <View style={styles.topLeft}>
+            {onClose ? (
+              <Pressable
+                accessibilityLabel="Back to explore"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={onClose}
+                style={styles.ringBtn}>
+                <ChevronLeft color={INK} size={ms(22)} strokeWidth={2.2} />
+              </Pressable>
+            ) : null}
+            <AppText color="inverse" style={styles.reelsTitle} variant="subtitle" weight="bold">
+              Reels
+            </AppText>
+          </View>
           <View style={styles.topActions}>
+            {onCreate ? (
+              <Pressable
+                accessibilityLabel="Create reel"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={onCreate}
+                style={styles.ringBtn}>
+                <Camera color={INK} size={ms(18)} strokeWidth={2.2} />
+              </Pressable>
+            ) : null}
             <Pressable
               accessibilityLabel="Messages"
               accessibilityRole="button"
@@ -146,6 +177,12 @@ export function ReelStage({
         <View pointerEvents="box-none" style={styles.bottomBlock}>
           <View style={styles.meta}>
             <View style={styles.identity}>
+            <Pressable
+              accessibilityLabel={`${reel.author} profile`}
+              accessibilityRole="link"
+              disabled={!onAuthorPress}
+              onPress={onAuthorPress}
+              style={styles.identityHit}>
               <View style={[styles.avatar, { backgroundColor: reel.color }]}>
                 <AppText color="inverse" variant="caption" weight="semibold">
                   {getUserInitials(reel.author)}
@@ -159,6 +196,8 @@ export function ReelStage({
                   {reel.authorRole} · {reel.postedAgo}
                 </AppText>
               </View>
+            </Pressable>
+              {reel.isOwn ? null : (
               <Pressable
                 accessibilityLabel={isFollowing ? 'Following' : 'Follow'}
                 accessibilityRole="button"
@@ -171,6 +210,7 @@ export function ReelStage({
                   {isFollowing ? 'Following' : 'Follow'}
                 </AppText>
               </Pressable>
+              )}
             </View>
 
             <Pressable
@@ -285,6 +325,13 @@ const styles = StyleSheet.create({
     minHeight: vs(48),
     paddingHorizontal: s(16),
   },
+  topLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(8),
+    flex: 1,
+    minWidth: 0,
+  },
   reelsTitle: {
     color: INK,
     textShadowColor: 'rgba(0,0,0,0.55)',
@@ -325,6 +372,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: s(8),
+  },
+  identityHit: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(8),
+    minWidth: 0,
   },
   avatar: {
     width: ms(36),

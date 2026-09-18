@@ -11,7 +11,7 @@ export const APP_CONFIG = {
   appVersion: '0.0.1',
   /**
    * Versioned backend base URL (no trailing slash).
-   * From gitignored `.env` — LOCAL in debug, PRODUCTION in release.
+   * Debug: this PC's Wi-Fi IP. Release: API_BASE_URL_PRODUCTION.
    */
   apiBaseUrl: resolveApiBaseUrl(),
   /**

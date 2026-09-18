@@ -2,7 +2,7 @@
  * Horizontal Day Brief tiles (24h stories analogue — portrait, not rings).
  */
 
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
 
 import type { FeedPreviewBrief } from '@/features/feed/data/feed-preview';
@@ -60,18 +60,21 @@ export function DayBriefStrip({
                     borderStyle: isSelf && !isAuthed ? 'dashed' : 'solid',
                   },
                 ]}>
+                {brief.posterUri ? (
+                  <Image source={{ uri: brief.posterUri }} style={styles.poster} />
+                ) : null}
                 <View style={styles.mark}>
-                  {isSelf ? (
+                  {isSelf && !brief.posterUri ? (
                     <Plus
                       color={theme.colors.primary}
                       size={ms(22)}
                       strokeWidth={2.4}
                     />
-                  ) : (
+                  ) : !isSelf && !brief.posterUri ? (
                     <AppText color="inverse" style={styles.initials} weight="bold">
                       {brief.initials}
                     </AppText>
-                  )}
+                  ) : null}
                 </View>
 
                 <View style={styles.captionScrim}>
@@ -125,6 +128,15 @@ const styles = StyleSheet.create({
     borderRadius: radius.xl,
     borderWidth: 1.5,
     overflow: 'hidden',
+  },
+  poster: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
   },
   mark: {
     flex: 1,

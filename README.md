@@ -224,13 +224,21 @@ yarn test
 
 No lint or type errors should be committed.
 
+## Social media (mobile)
+
+Live social slices and **what is left** live in:
+
+- [`docs/SOCIAL-MEDIA.md`](./docs/SOCIAL-MEDIA.md)
+
+Follow that checklist (P0 → P1) instead of inventing a new feed/chat/reels model. Stories and Reels stay separate.
+
 ## Planned Mobile Modules
 
-- Full OTP auth flow
-- Swipe shell (`react-native-tab-view` + `react-native-pager-view`) with custom floating tab bar
-- Feed / Bookmark module
-- Community module
-- Learning / My Course module
-- AI mentor + Message
-- Chat and notifications
-- Profile and privacy controls
+Auth, Feed, Chat, Reels, Network, and public Profile are live. Remaining product work is listed only in [`docs/SOCIAL-MEDIA.md`](./docs/SOCIAL-MEDIA.md) (ops rebuild + web-only editors).
+
+Still later on mobile (not social P0):
+
+- Community depth beyond the current tab
+- Learning / My Course
+- AI mentor
+- Profile **edit** (privacy, cover crop) — use web `/profile/edit` for now

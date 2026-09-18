@@ -10,6 +10,12 @@ export type AppTabsContextValue = {
   index: number;
   jumpTo: (key: AppTabRouteKey) => void;
   activeKey: AppTabRouteKey;
+  /** Full-screen Reels player is open over the explore grid. */
+  reelsPlayerOpen: boolean;
+  setReelsPlayerOpen: (open: boolean) => void;
+  /** Feed Video chip asks Reels to open the composer. */
+  reelComposeNonce: number;
+  requestReelCompose: () => void;
 };
 
 const AppTabsContext = createContext<AppTabsContextValue | null>(null);
@@ -23,7 +29,7 @@ export function useAppTabs(): AppTabsContextValue {
   const value = useContext(AppTabsContext);
 
   if (!value) {
-    throw new Error('useAppTabs must be used within AppNavigator TabView.');
+    throw new Error('useAppTabs must be used within AppNavigator.');
   }
 
   return value;

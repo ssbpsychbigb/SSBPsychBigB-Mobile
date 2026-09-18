@@ -72,6 +72,7 @@ export type AuthUser = {
   mobileNumber: string;
   email: string;
   fullName: string;
+  username?: string;
   role: AuthRole;
   accountStatus: AccountStatus;
   isMobileVerified: boolean;

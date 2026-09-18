@@ -2,8 +2,8 @@
  * In-screen back chrome for social stack destinations (Reels, Network, …).
  */
 
-import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import type { ReactElement, ReactNode } from 'react';
+import { Pressable, ScrollView, StyleSheet, View, type RefreshControlProps } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
 
@@ -22,6 +22,7 @@ export type SocialStackChromeProps = {
   subtitleLines?: number;
   /** False on tab destinations that already have a bottom bar. */
   showBack?: boolean;
+  refreshControl?: ReactElement<RefreshControlProps>;
 };
 
 /**
@@ -35,6 +36,7 @@ export function SocialStackChrome({
   rightSlot,
   showBack = true,
   subtitleLines = 1,
+  refreshControl,
 }: SocialStackChromeProps) {
   const theme = useTheme();
   const navigation = useNavigation();
@@ -82,6 +84,7 @@ export function SocialStackChrome({
         contentContainerStyle={styles.scrollBody}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
+        refreshControl={refreshControl}
         showsVerticalScrollIndicator={false}
         style={styles.flex}>
         <View style={styles.content}>{children}</View>

@@ -19,7 +19,7 @@ export type AuthStackParamList = {
   };
 };
 
-/** Swipe tab keys (react-native-tab-view + pager-view). */
+/** Bottom tab keys. */
 export type AppTabRouteKey =
   | 'homepage'
   | 'reels'
@@ -50,5 +50,12 @@ export type RootStackParamList = {
   Bookmarks: undefined;
   Network: undefined;
   Messages: undefined;
+  ChatThread: { conversationId: string; name?: string; username?: string };
+  MemberProfile: { username: string; name?: string };
+  MemberNetwork: {
+    username: string;
+    name?: string;
+    kind: 'followers' | 'following' | 'mutual';
+  };
   Notifications: undefined;
 };

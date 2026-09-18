@@ -16,6 +16,7 @@ import { AppErrorBoundary } from '@/shared/errors';
 import { ThemeProvider } from '@/shared/theme';
 import { AppToastHost } from '@/shared/ui/toast';
 import { LogoutConfirmGate } from '@/features/auth/components/LogoutConfirmGate';
+import { ChatRealtimeBridge } from '@/features/message/components/ChatRealtimeBridge';
 
 export type AppProvidersProps = {
   children: ReactNode;
@@ -47,6 +48,7 @@ export function AppProviders({ children }: AppProvidersProps) {
         <QueryClientProvider client={queryClient}>
           <ThemeProvider>
             <AppErrorBoundary>{children}</AppErrorBoundary>
+            <ChatRealtimeBridge />
             <LogoutConfirmGate />
             <AppToastHost />
           </ThemeProvider>
