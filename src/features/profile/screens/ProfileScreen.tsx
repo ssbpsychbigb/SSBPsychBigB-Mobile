@@ -21,7 +21,7 @@ import {
 } from 'lucide-react-native';
 
 import { FAB_SIZE } from '@/app/navigation/CustomFloatingTabBar';
-import { useAppTabs } from '@/app/navigation/AppTabsContext';
+import { useAppTabsActions } from '@/app/navigation/AppTabsContext';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import {
   getActiveInstituteProfile,
@@ -46,7 +46,7 @@ import { AppText, Button, Screen, ScreenHeader } from '@/shared/ui';
 export function ProfileScreen() {
   const theme = useTheme();
   const goRoot = useRootNavigate();
-  const { jumpTo } = useAppTabs();
+  const { jumpTo } = useAppTabsActions();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const openRegister = useOpenAuth('Register');
