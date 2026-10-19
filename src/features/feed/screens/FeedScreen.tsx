@@ -15,7 +15,7 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, Trash2 } from 'lucide-react-native';
 
-import { useAppTabs } from '@/app/navigation/AppTabsContext';
+import { useAppTabsActions } from '@/app/navigation/AppTabsContext';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 
 import { JoinToContinueSheet } from '@/features/auth/components/JoinToContinueSheet';
@@ -128,7 +128,7 @@ export function FeedScreen() {
   const sessionKey = accessToken || 'guest';
   const openRegister = useOpenAuth('Register');
   const goRoot = useRootNavigate();
-  const { jumpTo, requestReelCompose } = useAppTabs();
+  const { jumpTo, requestReelCompose } = useAppTabsActions();
 
   const openMemberProfile = (username?: string, name?: string) => {
     if (!username?.trim()) {
