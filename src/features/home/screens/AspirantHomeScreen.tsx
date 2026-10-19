@@ -6,7 +6,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { BookOpen, ChevronRight, Target } from 'lucide-react-native';
 
-import { useAppTabs } from '@/app/navigation/AppTabsContext';
+import { useAppTabsActions } from '@/app/navigation/AppTabsContext';
 import { useAuthStore } from '@/features/auth';
 import { getRoleLabel } from '@/features/home/lib/role-label';
 import { getUserInitials } from '@/features/home/lib/user-initials';
@@ -20,7 +20,7 @@ import { AppText, Screen } from '@/shared/ui';
  */
 export function AspirantHomeScreen() {
   const theme = useTheme();
-  const { jumpTo } = useAppTabs();
+  const { jumpTo } = useAppTabsActions();
   const user = useAuthStore((state) => state.user);
 
   const displayName = user?.fullName?.trim() || APP_CONFIG.appName;

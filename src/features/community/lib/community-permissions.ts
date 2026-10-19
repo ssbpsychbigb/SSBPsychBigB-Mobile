@@ -21,7 +21,11 @@ export function canCreateCommunity(user: AuthUser | null | undefined): boolean {
     return false;
   }
   if (role === 'educator' && user?.instituteId) {
-    return (user.permissions || []).includes('community.create');
+    const permissions = [
+      ...(user.permissions || []),
+      ...(user.activeProfile?.permissions || []),
+    ];
+    return permissions.includes('community.create');
   }
   return true;
 }

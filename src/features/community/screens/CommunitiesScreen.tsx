@@ -67,6 +67,7 @@ export function CommunitiesScreen() {
   };
 
   const loading = discoverQuery.isLoading && !discoverQuery.data;
+  const showCreate = canCreate || !accessToken;
 
   return (
     <>
@@ -84,13 +85,16 @@ export function CommunitiesScreen() {
           />
         }
         rightSlot={
-          canCreate || !accessToken ? (
+          showCreate ? (
             <Pressable
               accessibilityLabel="Create community"
               accessibilityRole="button"
               onPress={onCreate}
-              style={[styles.createFab, { backgroundColor: theme.colors.primary }]}>
-              <Plus color="#FFFFFF" size={ms(18)} strokeWidth={2.4} />
+              style={[styles.createPill, { backgroundColor: theme.colors.primary }]}>
+              <Plus color="#FFFFFF" size={ms(16)} strokeWidth={2.4} />
+              <AppText color="inverse" variant="caption" weight="semibold">
+                Create
+              </AppText>
             </Pressable>
           ) : null
         }
@@ -98,6 +102,30 @@ export function CommunitiesScreen() {
         subtitle="Rooms for officers, educators, and serious prep"
         subtitleLines={2}
         title="Community">
+        {canCreate ? (
+          <Pressable
+            onPress={onCreate}
+            style={[
+              styles.hero,
+              {
+                backgroundColor: theme.colors.background,
+                borderColor: theme.colors.border,
+              },
+            ]}>
+            <View style={styles.heroCopy}>
+              <AppText variant="label" weight="bold">
+                Open a club from your phone
+              </AppText>
+              <AppText color="muted" variant="caption">
+                Name it, set public or private, then run members and rights here.
+              </AppText>
+            </View>
+            <View style={[styles.heroCta, { backgroundColor: theme.colors.primary }]}>
+              <Plus color="#FFFFFF" size={ms(16)} strokeWidth={2.4} />
+            </View>
+          </Pressable>
+        ) : null}
+
         <View
           style={[
             styles.search,
@@ -109,7 +137,7 @@ export function CommunitiesScreen() {
           <TextInput
             onChangeText={setQuery}
             onSubmitEditing={() => setSearch(query.trim())}
-            placeholder="Search clubs"
+            placeholder="Search NDA, SSB, TAT…"
             placeholderTextColor={theme.colors.textMuted}
             returnKeyType="search"
             style={[
@@ -171,9 +199,30 @@ export function CommunitiesScreen() {
           </AppText>
           {loading ? <Spinner /> : null}
           {!loading && clubs.length === 0 ? (
-            <AppText color="muted" variant="caption">
-              No clubs in this filter yet. Officers and educators can open one.
-            </AppText>
+            <View
+              style={[
+                styles.empty,
+                {
+                  backgroundColor: theme.colors.background,
+                  borderColor: theme.colors.border,
+                },
+              ]}>
+              <AppText variant="label" weight="semibold">
+                No clubs in this filter yet
+              </AppText>
+              <AppText color="muted" variant="caption">
+                Officers, institutes, and educators can open one from the phone.
+              </AppText>
+              {showCreate ? (
+                <Pressable
+                  onPress={onCreate}
+                  style={[styles.emptyCta, { backgroundColor: theme.colors.primary }]}>
+                  <AppText color="inverse" variant="caption" weight="semibold">
+                    Create community
+                  </AppText>
+                </Pressable>
+              ) : null}
+            </View>
           ) : null}
           {clubs.map((club) => (
             <CommunityClubCard
@@ -204,10 +253,31 @@ export function CommunitiesScreen() {
 }
 
 const styles = StyleSheet.create({
-  createFab: {
-    width: ms(40),
-    height: ms(40),
-    borderRadius: ms(20),
+  createPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(4),
+    height: ms(36),
+    paddingHorizontal: s(12),
+    borderRadius: ms(18),
+  },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(12),
+    borderWidth: 1,
+    borderRadius: ms(18),
+    padding: s(14),
+    marginBottom: vs(12),
+  },
+  heroCopy: {
+    flex: 1,
+    gap: vs(4),
+  },
+  heroCta: {
+    width: ms(36),
+    height: ms(36),
+    borderRadius: ms(18),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -239,6 +309,21 @@ const styles = StyleSheet.create({
   section: {
     gap: vs(10),
     marginBottom: vs(18),
+  },
+  empty: {
+    borderWidth: 1,
+    borderRadius: ms(18),
+    padding: s(16),
+    gap: vs(8),
+  },
+  emptyCta: {
+    alignSelf: 'flex-start',
+    height: ms(36),
+    paddingHorizontal: s(14),
+    borderRadius: ms(18),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: vs(4),
   },
   more: {
     alignItems: 'center',

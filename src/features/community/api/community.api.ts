@@ -221,6 +221,24 @@ export const communityApi = {
     );
   },
 
+  setCoAdmin(
+    slug: string,
+    input: { userId: string; rights: Record<string, boolean> },
+    token: string,
+  ) {
+    return apiRequest<CommunityMember>(
+      `/communities/${encodeURIComponent(slug)}/co-admin`,
+      { method: 'PUT', token, body: input },
+    );
+  },
+
+  removeCoAdmin(slug: string, token: string) {
+    return apiRequest<Community>(
+      `/communities/${encodeURIComponent(slug)}/co-admin`,
+      { method: 'DELETE', token },
+    );
+  },
+
   getFeed(
     slug: string,
     params: {
