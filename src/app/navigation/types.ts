@@ -45,7 +45,7 @@ export type RootStackParamList = {
   ApplicationResubmit: undefined;
   Restricted: undefined;
   Onboarding: undefined;
-  App: undefined;
+  App: NavigatorScreenParams<AppTabParamList> | undefined;
   Workspace: undefined;
   Bookmarks: undefined;
   Network: undefined;
