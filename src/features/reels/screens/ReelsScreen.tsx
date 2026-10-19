@@ -16,7 +16,9 @@ import {
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Camera, Search, X } from 'lucide-react-native';
 
-import { useAppTabs } from '@/app/navigation/AppTabsContext';
+import { useIsFocused } from '@react-navigation/native';
+
+import { useAppTabsActions, useAppTabsState } from '@/app/navigation/AppTabsContext';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import { JoinToContinueSheet } from '@/features/auth/components/JoinToContinueSheet';
 import { toMultipartFilePart } from '@/features/auth/lib/upload-asset';
@@ -122,7 +124,9 @@ export function ReelsScreen() {
   const theme = useTheme();
   const queryClient = useQueryClient();
   const { width } = useWindowDimensions();
-  const { activeKey, setReelsPlayerOpen, reelComposeNonce } = useAppTabs();
+  const tabFocused = useIsFocused();
+  const { setReelsPlayerOpen } = useAppTabsActions();
+  const { reelComposeNonce } = useAppTabsState();
   const goRoot = useRootNavigate();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
@@ -138,7 +142,6 @@ export function ReelsScreen() {
 
   const reelsQuery = useReelsQuery(accessToken);
 
-  const tabFocused = activeKey === 'reels';
   const copy = gate ? GATE_COPY[gate] : GATE_COPY.like;
   const tileSize = (width - GRID_GAP * (GRID_COLUMNS - 1)) / GRID_COLUMNS;
 
@@ -183,13 +186,13 @@ export function ReelsScreen() {
   }, [playerOpen, setReelsPlayerOpen]);
 
   useEffect(() => {
-    if (activeKey !== 'reels') {
+    if (!tabFocused) {
       setPlayerOpen(false);
     }
-  }, [activeKey]);
+  }, [tabFocused]);
 
   useEffect(() => {
-    if (reelComposeNonce > 0 && activeKey === 'reels') {
+    if (reelComposeNonce > 0 && tabFocused) {
       requireMember('compose', () => setComposeOpen(true));
     }
     // * Only react to Feed → Reels compose requests.
