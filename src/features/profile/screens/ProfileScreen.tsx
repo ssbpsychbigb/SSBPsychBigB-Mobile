@@ -4,6 +4,7 @@
 
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   Bell,
@@ -19,7 +20,8 @@ import {
   Users,
 } from 'lucide-react-native';
 
-import { useAppTabs } from '@/app/navigation/AppTabsContext';
+import { FAB_SIZE } from '@/app/navigation/CustomFloatingTabBar';
+import { useAppTabsActions } from '@/app/navigation/AppTabsContext';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import {
   getActiveInstituteProfile,
@@ -32,6 +34,7 @@ import {
 } from '@/features/auth';
 import { getRoleLabel } from '@/features/home/lib/role-label';
 import { getUserInitials } from '@/features/home/lib/user-initials';
+import { requireMemberProfileParams } from '@/features/profile/lib/require-member-profile';
 import { APP_CONFIG } from '@/shared/constants/config';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
@@ -43,7 +46,7 @@ import { AppText, Button, Screen, ScreenHeader } from '@/shared/ui';
 export function ProfileScreen() {
   const theme = useTheme();
   const goRoot = useRootNavigate();
-  const { jumpTo } = useAppTabs();
+  const { jumpTo } = useAppTabsActions();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const openRegister = useOpenAuth('Register');
@@ -151,6 +154,20 @@ export function ProfileScreen() {
           <AppText color="secondary" style={styles.contextHint} variant="caption">
             Currently in {activeInstitute.instituteName || 'institute'} mode
           </AppText>
+        ) : null}
+        {user?.username ? (
+          <Pressable
+            onPress={() => {
+              const params = requireMemberProfileParams(user.username, user.fullName);
+              if (params) {
+                goRoot('MemberProfile', params);
+              }
+            }}
+            style={styles.publicLink}>
+            <AppText color="brand" variant="caption" weight="semibold">
+              View public profile
+            </AppText>
+          </Pressable>
         ) : null}
       </Animated.View>
 
@@ -270,12 +287,20 @@ export function ProfileScreen() {
             </View>
           </Button>
         ) : null}
-        <Button fullWidth onPress={logout} variant="secondary">
-          <View style={styles.logoutRow}>
-            <LogOut color={theme.colors.text} size={ms(18)} />
-            <AppText variant="label">Sign out</AppText>
-          </View>
-        </Button>
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.88}
+          onPress={logout}
+          style={[
+            styles.signOut,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}>
+          <LogOut color={theme.colors.text} size={ms(18)} />
+          <AppText variant="label">Sign out</AppText>
+        </TouchableOpacity>
         <AppText color="muted" style={styles.version} variant="caption">
           {APP_CONFIG.appName} · v{APP_CONFIG.appVersion}
         </AppText>
@@ -315,7 +340,8 @@ function DiscoverTile({ icon, label, onPress }: DiscoverTileProps) {
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: vs(28),
+    // * Clears the floating tab bar and center FAB so Sign out stays tappable.
+    paddingBottom: vs(28) + FAB_SIZE,
   },
   hero: {
     alignItems: 'center',
@@ -348,6 +374,9 @@ const styles = StyleSheet.create({
   },
   contextHint: {
     textAlign: 'center',
+  },
+  publicLink: {
+    marginTop: vs(8),
   },
   section: {
     marginBottom: vs(24),
@@ -401,6 +430,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: ms(8),
+  },
+  signOut: {
+    minHeight: ms(44),
+    borderRadius: ms(12),
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: ms(8),
+    paddingHorizontal: s(16),
   },
   version: {
     textAlign: 'center',

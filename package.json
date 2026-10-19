@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android --active-arch-only",
+    "apk:client": "node scripts/build-client-apk.js",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "node api.js && react-native start --reset-cache",
@@ -12,6 +13,7 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^5.5.7",
+    "@react-native-clipboard/clipboard": "1.16.3",
     "@react-native-community/datetimepicker": "9.1.0",
     "@react-native/new-app-screen": "0.86.0",
     "@react-navigation/bottom-tabs": "^7.18.14",
@@ -36,6 +38,7 @@
     "react-native-toast-message": "2.4.0",
     "react-native-video": "^6.19.2",
     "react-native-worklets": "0.12.1",
+    "socket.io-client": "^4.8.3",
     "zod": "^4.4.3",
     "zustand": "^5.0.14"
   },

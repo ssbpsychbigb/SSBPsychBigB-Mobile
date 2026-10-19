@@ -33,6 +33,11 @@ export function useAuthSessionReady(): boolean {
       }
 
       const latest = await authApi.me(accessToken);
+      // * A sign-out during this request must not write the user back.
+      if (useAuthStore.getState().accessToken !== accessToken) {
+        return latest;
+      }
+
       // * Write before React Query marks success so status gates see fresh data.
       useAuthStore.getState().setUser(latest);
 

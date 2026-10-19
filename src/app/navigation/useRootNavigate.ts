@@ -10,6 +10,12 @@ import type { RootStackParamList } from '@/app/navigation/types';
 
 type RootName = keyof RootStackParamList;
 
+type NavNode = {
+  getState?: () => { routeNames?: string[] };
+  getParent?: () => unknown;
+  navigate: (name: string, params?: object) => void;
+};
+
 /**
  * Walks up to the navigator that registered `name` (App tabs sit under Root).
  */
@@ -18,20 +24,20 @@ export function useRootNavigate() {
     useNavigation<NativeStackNavigationProp<RootStackParamList>>();
 
   return useCallback(
-    (name: RootName) => {
-      let current: { getState?: () => { routeNames?: string[] }; getParent?: () => unknown; navigate: (n: never) => void } | null =
-        navigation;
+    <T extends RootName>(name: T, params?: RootStackParamList[T]) => {
+      let current: NavNode | null = navigation as unknown as NavNode;
+      const payload = params as object | undefined;
 
       while (current) {
         const names = current.getState?.()?.routeNames;
         if (names?.includes(name)) {
-          current.navigate(name as never);
+          current.navigate(name, payload);
           return;
         }
-        current = (current.getParent?.() as typeof current) ?? null;
+        current = (current.getParent?.() as NavNode) ?? null;
       }
 
-      navigation.navigate(name as never);
+      (navigation as unknown as NavNode).navigate(name, payload);
     },
     [navigation],
   );

@@ -22,9 +22,11 @@ export function LogoutConfirmGate() {
   const queryClient = useQueryClient();
 
   const handleConfirm = () => {
+    const token = accessToken;
     cancelLogout();
+    void queryClient.cancelQueries({ queryKey: authSessionKeys.me(token) });
     clearSession();
-    queryClient.removeQueries({ queryKey: authSessionKeys.me(accessToken) });
+    queryClient.removeQueries({ queryKey: authSessionKeys.me(token) });
     queryClient.removeQueries({ queryKey: ['auth', 'session', 'me'] });
     showToast.info('Signed out', 'See you soon on BIGB.');
   };

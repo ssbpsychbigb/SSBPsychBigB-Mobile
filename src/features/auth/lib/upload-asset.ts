@@ -14,6 +14,10 @@ const MIME_BY_EXT: Record<string, string> = {
   pdf: 'application/pdf',
   heic: 'image/heic',
   heif: 'image/heif',
+  mp4: 'video/mp4',
+  mov: 'video/quicktime',
+  webm: 'video/webm',
+  '3gp': 'video/3gpp',
 };
 
 /**
@@ -31,7 +35,7 @@ export function normalizeUploadMime(
     return 'image/jpeg';
   }
 
-  if (raw && raw !== 'image' && raw !== 'application/octet-stream') {
+  if (raw && raw !== 'image' && raw !== 'application/octet-stream' && raw !== 'video') {
     return raw;
   }
 
@@ -72,6 +76,15 @@ export function ensureUploadFileName(
   }
   if (mime === 'application/pdf') {
     return `${base || field}.pdf`;
+  }
+  if (mime === 'video/mp4' || mime === 'video/3gpp') {
+    return `${base || field}.mp4`;
+  }
+  if (mime === 'video/quicktime') {
+    return `${base || field}.mov`;
+  }
+  if (mime === 'video/webm') {
+    return `${base || field}.webm`;
   }
 
   return `${base || field}.jpg`;
@@ -125,5 +138,17 @@ export function isAllowedUploadMime(mime: string): boolean {
     mime === 'image/png' ||
     mime === 'image/webp' ||
     mime === 'application/pdf'
+  );
+}
+
+/**
+ * Feed / Reels / Day Brief video MIME types the API accepts.
+ */
+export function isAllowedVideoMime(mime: string): boolean {
+  return (
+    mime === 'video/mp4' ||
+    mime === 'video/webm' ||
+    mime === 'video/quicktime' ||
+    mime === 'video/3gpp'
   );
 }

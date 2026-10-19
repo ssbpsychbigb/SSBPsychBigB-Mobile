@@ -19,7 +19,7 @@ export type AuthStackParamList = {
   };
 };
 
-/** Swipe tab keys (react-native-tab-view + pager-view). */
+/** Bottom tab keys. */
 export type AppTabRouteKey =
   | 'homepage'
   | 'reels'
@@ -45,10 +45,19 @@ export type RootStackParamList = {
   ApplicationResubmit: undefined;
   Restricted: undefined;
   Onboarding: undefined;
-  App: undefined;
+  App: NavigatorScreenParams<AppTabParamList> | undefined;
   Workspace: undefined;
   Bookmarks: undefined;
   Network: undefined;
   Messages: undefined;
+  ChatThread: { conversationId: string; name?: string; username?: string };
+  MemberProfile: { username: string; name?: string };
+  MemberNetwork: {
+    username: string;
+    name?: string;
+    kind: 'followers' | 'following' | 'mutual';
+  };
   Notifications: undefined;
+  ClubHome: { slug: string; invite?: string };
+  CreateCommunity: undefined;
 };

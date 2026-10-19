@@ -5,7 +5,14 @@
  * * FAB lift lives INSIDE the bar height (paddingTop) so Android does not clip it.
  */
 
-import { Pressable, StyleSheet, View, useWindowDimensions } from 'react-native';
+import { useMemo, type ReactNode } from 'react';
+import {
+  Animated,
+  Pressable,
+  StyleSheet,
+  View,
+  useWindowDimensions,
+} from 'react-native';
 import type { NavigationState } from 'react-native-tab-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -33,6 +40,11 @@ export const FAB_SIZE = ms(56);
 export type CustomFloatingTabBarProps = {
   navigationState: NavigationState<AppTabRoute>;
   jumpTo: (key: string) => void;
+  /**
+   * Pager scroll position. Drives the active style on the UI thread so the
+   * highlight moves with the page instead of after it settles.
+   */
+  position?: Animated.AnimatedInterpolation<number> | null;
   /** Hide the hairline above the bar (Reels full-bleed). */
   hideTopEdge?: boolean;
 };
@@ -45,6 +57,7 @@ type SideTabKey = Exclude<AppTabRouteKey, 'myCourse'>;
 export function CustomFloatingTabBar({
   navigationState,
   jumpTo,
+  position = null,
   hideTopEdge = false,
 }: CustomFloatingTabBarProps) {
   const theme = useTheme();
@@ -121,7 +134,6 @@ export function CustomFloatingTabBar({
         <View style={[styles.row, { height: TAB_BAR_BASE_HEIGHT }]}>
           {navigationState.routes.map((route, index) => {
             const focused = navigationState.index === index;
-            const color = focused ? active : inactive;
             const isCenter = route.key === 'myCourse';
 
             return (
@@ -131,26 +143,46 @@ export function CustomFloatingTabBar({
                 accessibilityState={{ selected: focused }}
                 onPress={() => jumpTo(route.key)}
                 style={[styles.tab, { width: tabWidth }]}>
-                {isCenter ? (
-                  <View style={styles.iconSlot} />
-                ) : (
-                  <View style={styles.iconSlot}>
-                    {renderSideIcon(route.key as SideTabKey, focused, color)}
-                  </View>
-                )}
-                <AppText
-                  numberOfLines={1}
-                  style={[
-                    styles.label,
-                    {
-                      color: focused ? active : inactive,
-                      fontFamily: resolveFontFamily(
-                        focused ? 'semibold' : 'medium',
-                      ),
-                    },
-                  ]}>
-                  {route.title}
-                </AppText>
+                <View style={styles.iconSlot}>
+                  {isCenter ? null : (
+                    <FocusCrossfade
+                      count={navigationState.routes.length}
+                      focused={focused}
+                      index={index}
+                      position={position}>
+                      {(isActive) =>
+                        renderSideIcon(
+                          route.key as SideTabKey,
+                          isActive,
+                          isActive ? active : inactive,
+                        )
+                      }
+                    </FocusCrossfade>
+                  )}
+                </View>
+                <View style={styles.labelSlot}>
+                  <FocusCrossfade
+                    count={navigationState.routes.length}
+                    focused={focused}
+                    index={index}
+                    position={position}>
+                    {(isActive) => (
+                      <AppText
+                        numberOfLines={1}
+                        style={[
+                          styles.label,
+                          {
+                            color: isActive ? active : inactive,
+                            fontFamily: resolveFontFamily(
+                              isActive ? 'semibold' : 'medium',
+                            ),
+                          },
+                        ]}>
+                        {route.title}
+                      </AppText>
+                    )}
+                  </FocusCrossfade>
+                </View>
               </Pressable>
             );
           })}
@@ -175,6 +207,71 @@ export function CustomFloatingTabBar({
       </Pressable>
     </View>
   );
+}
+
+type FocusCrossfadeProps = {
+  position?: Animated.AnimatedInterpolation<number> | null;
+  index: number;
+  count: number;
+  focused: boolean;
+  children: (focused: boolean) => ReactNode;
+};
+
+/**
+ * Crossfades active and inactive chrome with the pager position.
+ * Falls back to the settled index until the pager position is bound.
+ */
+function FocusCrossfade({
+  position,
+  index,
+  count,
+  focused,
+  children,
+}: FocusCrossfadeProps) {
+  const layers = useMemo(
+    () => (position ? tabFocusOpacities(position, index, count) : null),
+    [count, index, position],
+  );
+
+  if (!layers) {
+    return <>{children(focused)}</>;
+  }
+
+  return (
+    <>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.crossfade, { opacity: layers.off }]}>
+        {children(false)}
+      </Animated.View>
+      <Animated.View
+        pointerEvents="none"
+        style={[styles.crossfade, { opacity: layers.on }]}>
+        {children(true)}
+      </Animated.View>
+    </>
+  );
+}
+
+function tabFocusOpacities(
+  position: Animated.AnimatedInterpolation<number>,
+  tabIndex: number,
+  count: number,
+) {
+  const inputRange = Array.from({ length: count }, (_, i) => i);
+
+  return {
+    on: position.interpolate({
+      inputRange,
+      outputRange: inputRange.map((i) => (i === tabIndex ? 1 : 0)),
+      extrapolate: 'clamp',
+    }),
+    off: position.interpolate({
+      inputRange,
+      outputRange: inputRange.map((i) => (i === tabIndex ? 0 : 1)),
+      extrapolate: 'clamp',
+    }),
+  };
 }
 
 const styles = StyleSheet.create({
@@ -209,6 +306,22 @@ const styles = StyleSheet.create({
   },
   iconSlot: {
     height: vs(26),
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelSlot: {
+    height: lineHeight(11, 1.27),
+    alignSelf: 'stretch',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  crossfade: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
     alignItems: 'center',
     justifyContent: 'center',
   },

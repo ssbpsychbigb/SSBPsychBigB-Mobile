@@ -3,6 +3,7 @@
  */
 
 import { Pressable, StyleSheet, View } from 'react-native';
+import { Star } from 'lucide-react-native';
 
 import type { InboxThreadPreview } from '@/features/message/data/messages-preview';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
@@ -13,14 +14,23 @@ export type InboxThreadRowProps = {
   thread: InboxThreadPreview;
   showDivider: boolean;
   onPress: () => void;
+  onToggleStar?: () => void;
+  starBusy?: boolean;
 };
 
 /**
  * Flat conversation row with avatar, preview, time, and unread count.
  */
-export function InboxThreadRow({ thread, showDivider, onPress }: InboxThreadRowProps) {
+export function InboxThreadRow({
+  thread,
+  showDivider,
+  onPress,
+  onToggleStar,
+  starBusy,
+}: InboxThreadRowProps) {
   const theme = useTheme();
   const unread = thread.unread > 0;
+  const starred = Boolean(thread.starred);
 
   return (
     <Pressable
@@ -68,6 +78,19 @@ export function InboxThreadRow({ thread, showDivider, onPress }: InboxThreadRowP
           </AppText>
         </View>
         <View style={styles.bottomLine}>
+          {thread.youBlocked || thread.blockedByPeer ? (
+            <View
+              style={[
+                styles.blockChip,
+                { backgroundColor: `${theme.colors.danger}18` },
+              ]}>
+              <AppText
+                style={[styles.blockChipLabel, { color: theme.colors.danger }]}
+                weight="semibold">
+                {thread.youBlocked ? 'You blocked' : 'Blocked you'}
+              </AppText>
+            </View>
+          ) : null}
           <AppText
             color={unread ? 'primary' : 'secondary'}
             numberOfLines={1}
@@ -82,6 +105,25 @@ export function InboxThreadRow({ thread, showDivider, onPress }: InboxThreadRowP
                 {thread.unread > 9 ? '9+' : String(thread.unread)}
               </AppText>
             </View>
+          ) : null}
+          {onToggleStar ? (
+            <Pressable
+              accessibilityLabel={starred ? 'Unstar' : 'Star'}
+              accessibilityRole="button"
+              disabled={starBusy}
+              hitSlop={ms(8)}
+              onPress={(event) => {
+                event.stopPropagation();
+                onToggleStar();
+              }}
+              style={styles.starBtn}>
+              <Star
+                color={starred ? theme.colors.primary : theme.colors.textMuted}
+                fill={starred ? theme.colors.primary : 'none'}
+                size={ms(18)}
+                strokeWidth={2}
+              />
+            </Pressable>
           ) : null}
         </View>
       </View>
@@ -150,6 +192,16 @@ const styles = StyleSheet.create({
     flex: 1,
     lineHeight: lineHeight(13, 1.35),
   },
+  blockChip: {
+    borderRadius: ms(8),
+    paddingHorizontal: s(6),
+    paddingVertical: vs(2),
+  },
+  blockChipLabel: {
+    fontSize: fontSize(10),
+    lineHeight: lineHeight(10, 1.2),
+    includeFontPadding: false,
+  },
   badge: {
     minWidth: ms(20),
     height: ms(20),
@@ -161,5 +213,11 @@ const styles = StyleSheet.create({
   badgeLabel: {
     includeFontPadding: false,
     fontSize: fontSize(10),
+  },
+  starBtn: {
+    width: ms(28),
+    height: ms(28),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
