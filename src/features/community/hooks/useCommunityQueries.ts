@@ -346,6 +346,34 @@ export function useKickMemberMutation(slug: string) {
   });
 }
 
+export function useSetCoAdminMutation(slug: string) {
+  const token = useAuthStore((s) => s.accessToken);
+  const invalidate = useInvalidateClub(slug);
+  return useMutation({
+    mutationFn: (input: { userId: string; rights: Record<string, boolean> }) => {
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return communityApi.setCoAdmin(slug, input, token);
+    },
+    onSuccess: invalidate,
+  });
+}
+
+export function useRemoveCoAdminMutation(slug: string) {
+  const token = useAuthStore((s) => s.accessToken);
+  const invalidate = useInvalidateClub(slug);
+  return useMutation({
+    mutationFn: () => {
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+      return communityApi.removeCoAdmin(slug, token);
+    },
+    onSuccess: invalidate,
+  });
+}
+
 export function useMuteMemberMutation(slug: string) {
   const token = useAuthStore((s) => s.accessToken);
   const invalidate = useInvalidateClub(slug);
