@@ -7,7 +7,7 @@
     "apk:client": "node scripts/build-client-apk.js",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "start": "node api.js && react-native start --reset-cache",
+    "start": "node init && react-native start --reset-cache",
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
