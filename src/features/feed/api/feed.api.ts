@@ -73,12 +73,27 @@ export const feedApi = {
     });
   },
 
-  addComment(postId: string, content: string, token: string) {
+  addComment(
+    postId: string,
+    content: string,
+    token: string,
+    parentCommentId?: string | null,
+  ) {
     return apiRequest<FeedComment>(`/posts/${postId}/comments`, {
       method: 'POST',
       token,
-      body: { content },
+      body: {
+        content,
+        parentCommentId: parentCommentId || undefined,
+      },
     });
+  },
+
+  toggleCommentLike(postId: string, commentId: string, token: string) {
+    return apiRequest<{ commentId: string; liked: boolean; likesCount: number }>(
+      `/posts/${postId}/comments/${commentId}/like`,
+      { method: 'POST', token },
+    );
   },
 
   uploadMedia(formData: FormData, token: string) {

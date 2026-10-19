@@ -232,13 +232,20 @@ Live social slices and **what is left** live in:
 
 Follow that checklist (P0 → P1) instead of inventing a new feed/chat/reels model. Stories and Reels stay separate.
 
+## Community (mobile)
+
+Full club product (create, join approve, rooms, dual-key delete) is tracked in:
+
+- [`docs/COMMUNITY.md`](./docs/COMMUNITY.md)
+
+Same `/api/v1/communities…` contract as web. Super Admin quota stays admin web.
+
 ## Planned Mobile Modules
 
-Auth, Feed, Chat, Reels, Network, and public Profile are live. Remaining product work is listed only in [`docs/SOCIAL-MEDIA.md`](./docs/SOCIAL-MEDIA.md) (ops rebuild + web-only editors).
+Auth, Feed, Chat, Reels, Network, public Profile, and Community are live. Remaining product work is listed only in [`docs/SOCIAL-MEDIA.md`](./docs/SOCIAL-MEDIA.md) (ops rebuild + web-only editors).
 
 Still later on mobile (not social P0):
 
-- Community depth beyond the current tab
 - Learning / My Course
 - AI mentor
 - Profile **edit** (privacy, cover crop) — use web `/profile/edit` for now

@@ -2,8 +2,13 @@
  * Authenticated app shell — tabs + swipe between Feed, Reels, Course, Community, You.
  */
 
-import { useCallback, useLayoutEffect, useMemo, useState } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import {
+  StyleSheet,
+  useWindowDimensions,
+  View,
+  type Animated,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -42,10 +47,40 @@ const renderScene = SceneMap({
   profile: ProfileScreen,
 });
 
+/** Ignore pager callbacks that report the previous page right after a tap. */
+const TAB_PRESS_LOCK_MS = 450;
+
+type PagerPosition = Animated.AnimatedInterpolation<number>;
+
+type PagerBind = {
+  jumpTo: (key: string) => void;
+  position: PagerPosition;
+};
+
+/**
+ * Publishes the pager jump + scroll position to the overlay tab bar.
+ * The bar stays outside TabView so the center FAB is not clipped.
+ */
+function TabPagerBridge({
+  jumpTo,
+  position,
+  onBind,
+}: PagerBind & { onBind: (bind: PagerBind) => void }) {
+  const onBindRef = useRef(onBind);
+  onBindRef.current = onBind;
+
+  useLayoutEffect(() => {
+    onBindRef.current({ jumpTo, position });
+  }, [jumpTo, position]);
+
+  return null;
+}
+
 /**
  * Signed-in experience with overlay floating tab bar.
  * * Tab bar is outside TabView so Android does not clip the center FAB.
- * * Swipe stays on so Android pager actually changes page with the tab highlight.
+ * * Programmatic changes snap. The highlight follows pager position, so it
+ *   does not wait until the page-settled callback.
  */
 export function AppNavigator() {
   const theme = useTheme();
@@ -56,13 +91,58 @@ export function AppNavigator() {
   const [index, setIndex] = useState(0);
   const [reelsPlayerOpen, setReelsPlayerOpen] = useState(false);
   const [reelComposeNonce, setReelComposeNonce] = useState(0);
+  const [pagerPosition, setPagerPosition] = useState<PagerPosition | null>(null);
+  const indexRef = useRef(0);
+  const targetRef = useRef(0);
+  const suppressStaleUntilRef = useRef(0);
+  const pagerJumpRef = useRef<(key: string) => void>(() => {});
 
-  const jumpTo = useCallback((key: AppTabRouteKey) => {
-    const next = ROUTES.findIndex((route) => route.key === key);
-    if (next >= 0) {
-      setReelsPlayerOpen(false);
-      setIndex(next);
+  const commitIndex = useCallback((next: number) => {
+    if (indexRef.current === next) {
+      return;
     }
+
+    indexRef.current = next;
+    setReelsPlayerOpen(false);
+    setIndex(next);
+  }, []);
+
+  const onIndexChange = useCallback(
+    (next: number) => {
+      if (
+        Date.now() < suppressStaleUntilRef.current &&
+        next !== targetRef.current
+      ) {
+        return;
+      }
+
+      targetRef.current = next;
+      commitIndex(next);
+    },
+    [commitIndex],
+  );
+
+  const jumpTo = useCallback(
+    (key: AppTabRouteKey) => {
+      const next = ROUTES.findIndex((route) => route.key === key);
+      if (next < 0 || next === indexRef.current) {
+        return;
+      }
+
+      targetRef.current = next;
+      suppressStaleUntilRef.current = Date.now() + TAB_PRESS_LOCK_MS;
+      commitIndex(next);
+      // * Native page + highlight move in this press, before the scene re-render.
+      pagerJumpRef.current(key);
+    },
+    [commitIndex],
+  );
+
+  const bindPager = useCallback((bind: PagerBind) => {
+    pagerJumpRef.current = bind.jumpTo;
+    setPagerPosition((current) =>
+      current === bind.position ? current : bind.position,
+    );
   }, []);
 
   const requestReelCompose = useCallback(() => {
@@ -112,15 +192,18 @@ export function AppNavigator() {
             { paddingBottom: immersiveReels ? 0 : bottomChrome - FAB_SIZE / 2 },
           ]}>
           <TabView
-            animationEnabled
+            animationEnabled={false}
             initialLayout={{ width: layout.width, height: layout.height }}
             navigationState={{ index, routes: ROUTES }}
-            onIndexChange={(next) => {
-              setReelsPlayerOpen(false);
-              setIndex(next);
-            }}
+            onIndexChange={onIndexChange}
             renderScene={renderScene}
-            renderTabBar={() => null}
+            renderTabBar={({ jumpTo: pagerJumpTo, position }) => (
+              <TabPagerBridge
+                jumpTo={pagerJumpTo}
+                onBind={bindPager}
+                position={position}
+              />
+            )}
             style={styles.tabView}
             swipeEnabled
           />
@@ -132,6 +215,7 @@ export function AppNavigator() {
               hideTopEdge={false}
               jumpTo={(key) => jumpTo(key as AppTabRouteKey)}
               navigationState={{ index, routes: ROUTES }}
+              position={pagerPosition}
             />
           </View>
         )}
@@ -156,6 +240,7 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     zIndex: 50,
-    elevation: 50,
+    // * No elevation here. Android treats an elevated parent as a full hit target,
+    //   which steals presses meant for the screen behind the transparent lift zone.
   },
 });

@@ -4,6 +4,7 @@
 
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
+import { TouchableOpacity } from 'react-native-gesture-handler';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
   Bell,
@@ -19,6 +20,7 @@ import {
   Users,
 } from 'lucide-react-native';
 
+import { FAB_SIZE } from '@/app/navigation/CustomFloatingTabBar';
 import { useAppTabs } from '@/app/navigation/AppTabsContext';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import {
@@ -285,12 +287,20 @@ export function ProfileScreen() {
             </View>
           </Button>
         ) : null}
-        <Button fullWidth onPress={logout} variant="secondary">
-          <View style={styles.logoutRow}>
-            <LogOut color={theme.colors.text} size={ms(18)} />
-            <AppText variant="label">Sign out</AppText>
-          </View>
-        </Button>
+        <TouchableOpacity
+          accessibilityRole="button"
+          activeOpacity={0.88}
+          onPress={logout}
+          style={[
+            styles.signOut,
+            {
+              backgroundColor: theme.colors.surface,
+              borderColor: theme.colors.border,
+            },
+          ]}>
+          <LogOut color={theme.colors.text} size={ms(18)} />
+          <AppText variant="label">Sign out</AppText>
+        </TouchableOpacity>
         <AppText color="muted" style={styles.version} variant="caption">
           {APP_CONFIG.appName} · v{APP_CONFIG.appVersion}
         </AppText>
@@ -330,7 +340,8 @@ function DiscoverTile({ icon, label, onPress }: DiscoverTileProps) {
 
 const styles = StyleSheet.create({
   content: {
-    paddingBottom: vs(28),
+    // * Clears the floating tab bar and center FAB so Sign out stays tappable.
+    paddingBottom: vs(28) + FAB_SIZE,
   },
   hero: {
     alignItems: 'center',
@@ -419,6 +430,16 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: ms(8),
+  },
+  signOut: {
+    minHeight: ms(44),
+    borderRadius: ms(12),
+    borderWidth: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: ms(8),
+    paddingHorizontal: s(16),
   },
   version: {
     textAlign: 'center',

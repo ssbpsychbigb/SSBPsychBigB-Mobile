@@ -2,7 +2,9 @@
  * Reusable confirmation dialog — compact, brand-aligned, responsive.
  */
 
+import { useRef } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { LogOut, type LucideIcon } from 'lucide-react-native';
 
 import { BUTTON_HEIGHT } from '@/shared/ui/Button';
@@ -42,92 +44,116 @@ export function ConfirmModal({
 }: ConfirmModalProps) {
   const theme = useTheme();
   const isDanger = tone === 'danger';
+  const wasVisible = useRef(false);
+  const ignoreBackdropUntil = useRef(0);
+
+  // * The press that opens the dialog can land on the backdrop in the same
+  // * frame. Ignore that tap so confirm dialogs stay open.
+  if (visible && !wasVisible.current) {
+    ignoreBackdropUntil.current = Date.now() + 400;
+  }
+  wasVisible.current = visible;
   const accent = isDanger ? theme.colors.danger : theme.colors.primary;
   const accentMuted = isDanger
     ? theme.palette.danger[50]
     : theme.colors.primaryMuted;
 
+  const dismissFromBackdrop = () => {
+    if (Date.now() < ignoreBackdropUntil.current) {
+      return;
+    }
+    onCancel();
+  };
+
   return (
     <Modal
       animationType="fade"
+      navigationBarTranslucent
       onRequestClose={onCancel}
+      statusBarTranslucent
       transparent
       visible={visible}>
-      <Pressable
-        accessibilityRole="button"
-        onPress={onCancel}
-        style={styles.backdrop}>
-        <Pressable
-          onPress={(event) => event.stopPropagation()}
-          style={[
-            styles.card,
-            {
-              backgroundColor: theme.colors.background,
-              borderColor: theme.colors.border,
-            },
-          ]}>
-          <View style={[styles.iconWrap, { backgroundColor: accentMuted }]}>
-            <Icon color={accent} size={ms(24)} strokeWidth={2} />
+      <GestureHandlerRootView style={styles.modalRoot}>
+        <View style={styles.backdrop}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={dismissFromBackdrop}
+            style={StyleSheet.absoluteFill}
+          />
+          <View
+            style={[
+              styles.card,
+              {
+                backgroundColor: theme.colors.background,
+                borderColor: theme.colors.border,
+              },
+            ]}>
+            <View style={[styles.iconWrap, { backgroundColor: accentMuted }]}>
+              <Icon color={accent} size={ms(24)} strokeWidth={2} />
+            </View>
+
+            <AppText style={styles.title} variant="subtitle" weight="bold">
+              {title}
+            </AppText>
+            <AppText color="secondary" style={styles.message} variant="caption">
+              {message}
+            </AppText>
+
+            <View style={styles.actions}>
+              <Pressable
+                accessibilityRole="button"
+                disabled={isLoading}
+                onPress={onCancel}
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.cancelBtn,
+                  {
+                    borderColor: theme.colors.border,
+                    backgroundColor: theme.colors.surface,
+                    opacity: pressed ? 0.88 : 1,
+                  },
+                ]}>
+                <AppText
+                  numberOfLines={2}
+                  style={styles.btnLabel}
+                  variant="label"
+                  weight="semibold">
+                  {cancelLabel}
+                </AppText>
+              </Pressable>
+
+              <Pressable
+                accessibilityRole="button"
+                disabled={isLoading}
+                onPress={onConfirm}
+                style={({ pressed }) => [
+                  styles.btn,
+                  {
+                    backgroundColor: accent,
+                    opacity: isLoading ? 0.55 : pressed ? 0.9 : 1,
+                  },
+                ]}>
+                <AppText
+                  color="inverse"
+                  numberOfLines={2}
+                  style={styles.btnLabel}
+                  variant="label"
+                  weight="semibold">
+                  {isLoading ? 'Please wait…' : confirmLabel}
+                </AppText>
+              </Pressable>
+            </View>
           </View>
-
-          <AppText style={styles.title} variant="subtitle" weight="bold">
-            {title}
-          </AppText>
-          <AppText color="secondary" style={styles.message} variant="caption">
-            {message}
-          </AppText>
-
-          <View style={styles.actions}>
-            <Pressable
-              accessibilityRole="button"
-              disabled={isLoading}
-              onPress={onCancel}
-              style={({ pressed }) => [
-                styles.btn,
-                styles.cancelBtn,
-                {
-                  borderColor: theme.colors.border,
-                  backgroundColor: theme.colors.surface,
-                  opacity: pressed ? 0.88 : 1,
-                },
-              ]}>
-              <AppText
-                numberOfLines={2}
-                style={styles.btnLabel}
-                variant="label"
-                weight="semibold">
-                {cancelLabel}
-              </AppText>
-            </Pressable>
-
-            <Pressable
-              accessibilityRole="button"
-              disabled={isLoading}
-              onPress={onConfirm}
-              style={({ pressed }) => [
-                styles.btn,
-                {
-                  backgroundColor: accent,
-                  opacity: isLoading ? 0.55 : pressed ? 0.9 : 1,
-                },
-              ]}>
-              <AppText
-                color="inverse"
-                numberOfLines={2}
-                style={styles.btnLabel}
-                variant="label"
-                weight="semibold">
-                {isLoading ? 'Please wait…' : confirmLabel}
-              </AppText>
-            </Pressable>
-          </View>
-        </Pressable>
-      </Pressable>
+        </View>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  modalRoot: {
+    flex: 1,
+  },
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.48)',

@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "android": "react-native run-android --active-arch-only",
+    "apk:client": "node scripts/build-client-apk.js",
     "ios": "react-native run-ios",
     "lint": "eslint .",
     "start": "react-native start --reset-cache",

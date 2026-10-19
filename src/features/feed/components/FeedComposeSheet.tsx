@@ -26,6 +26,8 @@ export type FeedComposeSheetProps = {
   busy: boolean;
   onClose: () => void;
   onSubmit: (input: { content: string; image?: PickedAsset }) => void;
+  heading?: string;
+  placeholder?: string;
 };
 
 /**
@@ -36,6 +38,8 @@ export function FeedComposeSheet({
   busy,
   onClose,
   onSubmit,
+  heading = 'Share with BIGB',
+  placeholder = 'Write like an officer — clear, specific, useful.',
 }: FeedComposeSheetProps) {
   const theme = useTheme();
   const [content, setContent] = useState('');
@@ -73,13 +77,13 @@ export function FeedComposeSheet({
             { backgroundColor: theme.colors.background, borderColor: theme.colors.border },
           ]}>
           <AppText variant="subtitle" weight="bold">
-            Share with BIGB
+            {heading}
           </AppText>
           <TextInput
             editable={!busy}
             multiline
             onChangeText={setContent}
-            placeholder="Write like an officer — clear, specific, useful."
+            placeholder={placeholder}
             placeholderTextColor={theme.colors.textMuted}
             style={[
               styles.input,

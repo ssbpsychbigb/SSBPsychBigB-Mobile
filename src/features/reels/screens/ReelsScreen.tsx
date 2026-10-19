@@ -2,7 +2,7 @@
  * Reels tab — live `/feed/reels` explore grid, then full-screen player.
  */
 
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
   RefreshControl,
@@ -135,7 +135,6 @@ export function ReelsScreen() {
   const [gate, setGate] = useState<GateKind | null>(null);
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
-  const autoOpenedRef = useRef(false);
 
   const reelsQuery = useReelsQuery(accessToken);
 
@@ -185,20 +184,9 @@ export function ReelsScreen() {
 
   useEffect(() => {
     if (activeKey !== 'reels') {
-      autoOpenedRef.current = false;
       setPlayerOpen(false);
-      return;
     }
-    if (reelsQuery.isPending || reelsQuery.isError || autoOpenedRef.current) {
-      return;
-    }
-    if (allReels.length === 0) {
-      return;
-    }
-    autoOpenedRef.current = true;
-    setQueueIds(allReels.map((reel) => reel.id));
-    setPlayerOpen(true);
-  }, [activeKey, allReels, reelsQuery.isError, reelsQuery.isPending]);
+  }, [activeKey]);
 
   useEffect(() => {
     if (reelComposeNonce > 0 && activeKey === 'reels') {
@@ -334,7 +322,6 @@ export function ReelsScreen() {
       void queryClient.invalidateQueries({ queryKey: feedKeys.all });
       showToast.success('Reel posted', 'It is live on Reels and the Home feed.');
       if (post?.id) {
-        autoOpenedRef.current = true;
         setQueueIds((current) => [post.id, ...current.filter((id) => id !== post.id)]);
         setPlayerOpen(true);
       }

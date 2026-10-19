@@ -31,6 +31,7 @@ import { MessageScreen, ChatThreadScreen } from '@/features/message';
 import { NetworkScreen } from '@/features/network';
 import { NotificationsScreen } from '@/features/notifications';
 import { MemberProfileScreen, MemberNetworkScreen } from '@/features/profile';
+import { ClubHomeScreen, CreateCommunityScreen } from '@/features/community';
 import { resolveFontFamily } from '@/shared/constants/fonts';
 import { useTheme } from '@/shared/theme';
 import { Spinner } from '@/shared/ui';
@@ -197,6 +198,8 @@ export function RootNavigator() {
                 component={NotificationsScreen}
                 name="Notifications"
               />
+              <Stack.Screen component={ClubHomeScreen} name="ClubHome" />
+              <Stack.Screen component={CreateCommunityScreen} name="CreateCommunity" />
               <Stack.Screen
                 component={HomeScreen}
                 name="Workspace"

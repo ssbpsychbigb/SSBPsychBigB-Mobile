@@ -58,4 +58,6 @@ export type RootStackParamList = {
     kind: 'followers' | 'following' | 'mutual';
   };
   Notifications: undefined;
+  ClubHome: { slug: string; invite?: string };
+  CreateCommunity: undefined;
 };

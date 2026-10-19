@@ -11,7 +11,7 @@ export const APP_CONFIG = {
   appVersion: '0.0.1',
   /**
    * Versioned backend base URL (no trailing slash).
-   * Debug: this PC's Wi-Fi IP. Release: API_BASE_URL_PRODUCTION.
+   * yarn android (debug): this PC LAN. yarn apk:client (release): Render.
    */
   apiBaseUrl: resolveApiBaseUrl(),
   /**

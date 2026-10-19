@@ -190,9 +190,11 @@ export function FeedPostCard({
       ) : null}
 
       <View style={styles.stats}>
-        <AppText color="muted" variant="caption">
-          {post.likesLabel} reactions · {post.commentsLabel} comments
-        </AppText>
+        <Pressable accessibilityRole="button" onPress={onComment}>
+          <AppText color="muted" variant="caption">
+            {post.likesLabel} reactions · {post.commentsLabel} comments
+          </AppText>
+        </Pressable>
       </View>
 
       <View style={[styles.actions, { borderTopColor: theme.colors.border }]}>

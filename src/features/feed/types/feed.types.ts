@@ -63,6 +63,8 @@ export type FeedComment = {
   parentCommentId: string | null;
   content: string;
   createdAt: string;
+  likesCount?: number;
+  liked?: boolean;
   author: FeedAuthor | null;
 };
 
@@ -88,6 +90,7 @@ export type CreatePostInput = {
   type?: FeedPostType;
   visibility?: FeedPostVisibility;
   categories: string[];
+  communityId?: string;
   media?: Array<{
     url: string;
     thumbnail?: string;

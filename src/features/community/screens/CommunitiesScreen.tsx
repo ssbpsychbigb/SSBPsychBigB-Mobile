@@ -1,86 +1,202 @@
 /**
- * Communities — public circles, join gated.
+ * Community hub — live discover, my clubs, create.
  */
 
-import { useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { useMemo, useState } from 'react';
+import { Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { Plus } from 'lucide-react-native';
 
+import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import { JoinToContinueSheet } from '@/features/auth/components/JoinToContinueSheet';
 import { useAuthStore } from '@/features/auth/store/auth.store';
-import { COMMUNITIES_PREVIEW } from '@/features/community/data/communities-preview';
+import { CommunityClubCard } from '@/features/community/components/CommunityClubCard';
+import {
+  useCommunitiesQuery,
+  useMyCommunitiesQuery,
+} from '@/features/community/hooks/useCommunityQueries';
+import { canCreateCommunity } from '@/features/community/lib/community-permissions';
+import { toCommunityCard } from '@/features/community/lib/to-community-card';
+import type { DiscoverFilter } from '@/features/community/types/community.types';
+import { resolveFontFamily } from '@/shared/constants/fonts';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome } from '@/shared/ui';
-import { showToast } from '@/shared/ui/toast';
+import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+
+const FILTERS: { id: DiscoverFilter; label: string }[] = [
+  { id: 'public', label: 'Public' },
+  { id: 'institute', label: 'Institute' },
+  { id: 'official', label: 'Official' },
+];
 
 /**
- * Defence-prep community list.
+ * Tab destination for clubs. Create and club home live on the root stack.
  */
 export function CommunitiesScreen() {
   const theme = useTheme();
+  const goRoot = useRootNavigate();
   const accessToken = useAuthStore((state) => state.accessToken);
+  const user = useAuthStore((state) => state.user);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [filter, setFilter] = useState<DiscoverFilter>('public');
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
 
-  const onJoin = () => {
+  const discoverQuery = useCommunitiesQuery(filter, search);
+  const mineQuery = useMyCommunitiesQuery(Boolean(accessToken));
+  const canCreate = canCreateCommunity(user);
+
+  const clubs = useMemo(() => {
+    const items = discoverQuery.data?.pages.flatMap((page) => page.items) ?? [];
+    return items.map(toCommunityCard);
+  }, [discoverQuery.data]);
+
+  const mine = useMemo(() => {
+    return (mineQuery.data?.items ?? []).map(toCommunityCard);
+  }, [mineQuery.data]);
+
+  const openClub = (slug: string) => {
+    goRoot('ClubHome', { slug });
+  };
+
+  const onCreate = () => {
     if (!accessToken) {
       setJoinOpen(true);
       return;
     }
-    showToast.info(
-      'Community',
-      'Join API wires in with /communities/:slug/join.',
-    );
+    goRoot('CreateCommunity');
   };
+
+  const loading = discoverQuery.isLoading && !discoverQuery.data;
 
   return (
     <>
       <SocialStackChrome
-        showBack={false}
-        subtitle="Focused rooms — not a noisy global chat"
-        title="Community">
-        {COMMUNITIES_PREVIEW.map((row) => (
-          <View
-            key={row.id}
-            style={[
-              styles.card,
-              {
-                backgroundColor: theme.colors.background,
-                borderColor: theme.colors.border,
-              },
-            ]}>
-            <View style={[styles.mark, { backgroundColor: row.color }]}>
-              <AppText color="inverse" variant="label" weight="bold">
-                {row.initials}
-              </AppText>
-            </View>
-            <View style={styles.copy}>
-              <AppText variant="label">{row.name}</AppText>
-              <AppText color="secondary" variant="caption">
-                {row.focus}
-              </AppText>
-              <AppText color="muted" variant="caption">
-                {row.members}
-              </AppText>
-            </View>
+        refreshControl={
+          <RefreshControl
+            onRefresh={() => {
+              void discoverQuery.refetch();
+              if (accessToken) {
+                void mineQuery.refetch();
+              }
+            }}
+            refreshing={discoverQuery.isRefetching && !discoverQuery.isFetchingNextPage}
+            tintColor={theme.colors.primary}
+          />
+        }
+        rightSlot={
+          canCreate || !accessToken ? (
             <Pressable
+              accessibilityLabel="Create community"
               accessibilityRole="button"
-              onPress={onJoin}
-              style={[styles.join, { backgroundColor: theme.colors.primary }]}>
-              <AppText
-                color="inverse"
-                style={styles.joinLabel}
-                variant="caption"
-                weight="semibold">
-                Join
+              onPress={onCreate}
+              style={[styles.createFab, { backgroundColor: theme.colors.primary }]}>
+              <Plus color="#FFFFFF" size={ms(18)} strokeWidth={2.4} />
+            </Pressable>
+          ) : null
+        }
+        showBack={false}
+        subtitle="Rooms for officers, educators, and serious prep"
+        subtitleLines={2}
+        title="Community">
+        <View
+          style={[
+            styles.search,
+            {
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+            },
+          ]}>
+          <TextInput
+            onChangeText={setQuery}
+            onSubmitEditing={() => setSearch(query.trim())}
+            placeholder="Search clubs"
+            placeholderTextColor={theme.colors.textMuted}
+            returnKeyType="search"
+            style={[
+              styles.searchInput,
+              {
+                color: theme.colors.text,
+                fontFamily: resolveFontFamily('regular'),
+              },
+            ]}
+            value={query}
+          />
+        </View>
+
+        <View style={styles.filters}>
+          {FILTERS.map((item) => {
+            const active = filter === item.id;
+            return (
+              <Pressable
+                key={item.id}
+                onPress={() => setFilter(item.id)}
+                style={[
+                  styles.chip,
+                  {
+                    backgroundColor: active
+                      ? theme.colors.primary
+                      : theme.colors.background,
+                    borderColor: active ? theme.colors.primary : theme.colors.border,
+                  },
+                ]}>
+                <AppText
+                  color={active ? 'inverse' : 'secondary'}
+                  variant="caption"
+                  weight="semibold">
+                  {item.label}
+                </AppText>
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {mine.length ? (
+          <View style={styles.section}>
+            <AppText variant="label" weight="bold">
+              Your clubs
+            </AppText>
+            {mine.slice(0, 6).map((club) => (
+              <CommunityClubCard
+                key={club.id}
+                club={club}
+                onPress={() => openClub(club.slug)}
+              />
+            ))}
+          </View>
+        ) : null}
+
+        <View style={styles.section}>
+          <AppText variant="label" weight="bold">
+            Discover
+          </AppText>
+          {loading ? <Spinner /> : null}
+          {!loading && clubs.length === 0 ? (
+            <AppText color="muted" variant="caption">
+              No clubs in this filter yet. Officers and educators can open one.
+            </AppText>
+          ) : null}
+          {clubs.map((club) => (
+            <CommunityClubCard
+              key={club.id}
+              club={club}
+              onPress={() => openClub(club.slug)}
+            />
+          ))}
+          {discoverQuery.hasNextPage ? (
+            <Pressable
+              onPress={() => void discoverQuery.fetchNextPage()}
+              style={styles.more}>
+              <AppText color="brand" variant="caption" weight="semibold">
+                {discoverQuery.isFetchingNextPage ? 'Loading…' : 'Load more'}
               </AppText>
             </Pressable>
-          </View>
-        ))}
+          ) : null}
+        </View>
       </SocialStackChrome>
       <JoinToContinueSheet
-        message="Community posts and events unlock after you create an account."
+        message="Create an account to open a club or request to join one."
         onClose={() => setJoinOpen(false)}
-        title="Join this circle"
+        title="Join BIGB first"
         visible={joinOpen}
       />
     </>
@@ -88,36 +204,44 @@ export function CommunitiesScreen() {
 }
 
 const styles = StyleSheet.create({
-  card: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderRadius: ms(18),
-    paddingHorizontal: s(12),
-    paddingVertical: vs(12),
-    marginBottom: vs(10),
-  },
-  mark: {
-    width: ms(48),
-    height: ms(48),
-    borderRadius: ms(14),
+  createFab: {
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: s(12),
   },
-  copy: {
-    flex: 1,
-    minWidth: 0,
-    gap: ms(2),
+  search: {
+    borderWidth: 1,
+    borderRadius: ms(16),
+    paddingHorizontal: s(14),
+    height: ms(46),
+    justifyContent: 'center',
+    marginBottom: vs(12),
   },
-  join: {
+  searchInput: {
+    fontSize: 15,
+    padding: 0,
+  },
+  filters: {
+    flexDirection: 'row',
+    gap: s(8),
+    marginBottom: vs(16),
+  },
+  chip: {
     height: ms(32),
     paddingHorizontal: s(14),
     borderRadius: ms(16),
+    borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  joinLabel: {
-    includeFontPadding: false,
+  section: {
+    gap: vs(10),
+    marginBottom: vs(18),
+  },
+  more: {
+    alignItems: 'center',
+    paddingVertical: vs(8),
   },
 });
