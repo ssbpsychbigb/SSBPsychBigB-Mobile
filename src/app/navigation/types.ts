@@ -33,7 +33,13 @@ export type AppTabRoute = {
 };
 
 /** @deprecated Prefer AppTabRouteKey — kept for call-site clarity. */
-export type AppTabParamList = Record<AppTabRouteKey, undefined>;
+export type AppTabParamList = {
+  homepage: undefined;
+  reels: undefined;
+  myCourse: { hub?: 'explore' | 'mine' | 'tests' } | undefined;
+  communities: undefined;
+  profile: undefined;
+};
 
 export type AppStackParamList = AppTabParamList;
 
@@ -60,4 +66,19 @@ export type RootStackParamList = {
   Notifications: undefined;
   ClubHome: { slug: string; invite?: string };
   CreateCommunity: undefined;
+  CourseDetail: { slug: string };
+  CourseCheckout: { slug: string };
+  LessonPlayer: { slug: string; lessonId: string };
+  AssessmentDetail: { slug: string };
+  AssessmentAttempt: { slug: string; attemptId: string };
+  AssessmentResult: { slug: string; attemptId: string };
+  AssessmentHistory: { slug?: string } | undefined;
+  AssessmentBookmarks: undefined;
+  AssessmentWeakTopics: undefined;
+  AssessmentLeaderboard: { slug: string };
+  AssessmentCheckout: { slug: string };
+  CourseWishlist: undefined;
+  LearningPathDetail: { pathSlug: string };
+  MyCertificates: undefined;
+  CertificateVerify: { code: string };
 };

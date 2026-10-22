@@ -32,6 +32,26 @@ import { NetworkScreen } from '@/features/network';
 import { NotificationsScreen } from '@/features/notifications';
 import { MemberProfileScreen, MemberNetworkScreen } from '@/features/profile';
 import { ClubHomeScreen, CreateCommunityScreen } from '@/features/community';
+import {
+  AssessmentAttemptScreen,
+  AssessmentBookmarksScreen,
+  AssessmentCheckoutScreen,
+  AssessmentDetailScreen,
+  AssessmentHistoryScreen,
+  AssessmentLeaderboardScreen,
+  AssessmentResultScreen,
+  AssessmentWeakTopicsScreen,
+} from '@/features/assessments';
+import {
+  CertificateVerifyScreen,
+  CourseCheckoutScreen,
+  CourseDetailScreen,
+  CourseWishlistScreen,
+  LearningPathDetailScreen,
+  LessonPlayerScreen,
+  MyCertificatesScreen,
+} from '@/features/learn';
+import { rootLinking } from '@/app/navigation/linking';
 import { resolveFontFamily } from '@/shared/constants/fonts';
 import { useTheme } from '@/shared/theme';
 import { Spinner } from '@/shared/ui';
@@ -135,7 +155,10 @@ export function RootNavigator() {
     <View style={styles.root}>
       <EmailVerificationHost />
       <View style={styles.navigator}>
-        <NavigationContainer ref={navigationRef} theme={resolvedNavTheme}>
+        <NavigationContainer
+          linking={rootLinking}
+          ref={navigationRef}
+          theme={resolvedNavTheme}>
         <Stack.Navigator
           initialRouteName={
             destination === 'app' ? appInitialRoute : undefined
@@ -200,6 +223,51 @@ export function RootNavigator() {
               />
               <Stack.Screen component={ClubHomeScreen} name="ClubHome" />
               <Stack.Screen component={CreateCommunityScreen} name="CreateCommunity" />
+              <Stack.Screen component={CourseDetailScreen} name="CourseDetail" />
+              <Stack.Screen component={CourseCheckoutScreen} name="CourseCheckout" />
+              <Stack.Screen component={LessonPlayerScreen} name="LessonPlayer" />
+              <Stack.Screen
+                component={AssessmentDetailScreen}
+                name="AssessmentDetail"
+              />
+              <Stack.Screen
+                component={AssessmentAttemptScreen}
+                name="AssessmentAttempt"
+              />
+              <Stack.Screen
+                component={AssessmentResultScreen}
+                name="AssessmentResult"
+              />
+              <Stack.Screen
+                component={AssessmentHistoryScreen}
+                name="AssessmentHistory"
+              />
+              <Stack.Screen
+                component={AssessmentBookmarksScreen}
+                name="AssessmentBookmarks"
+              />
+              <Stack.Screen
+                component={AssessmentWeakTopicsScreen}
+                name="AssessmentWeakTopics"
+              />
+              <Stack.Screen
+                component={AssessmentLeaderboardScreen}
+                name="AssessmentLeaderboard"
+              />
+              <Stack.Screen
+                component={AssessmentCheckoutScreen}
+                name="AssessmentCheckout"
+              />
+              <Stack.Screen component={CourseWishlistScreen} name="CourseWishlist" />
+              <Stack.Screen
+                component={LearningPathDetailScreen}
+                name="LearningPathDetail"
+              />
+              <Stack.Screen component={MyCertificatesScreen} name="MyCertificates" />
+              <Stack.Screen
+                component={CertificateVerifyScreen}
+                name="CertificateVerify"
+              />
               <Stack.Screen
                 component={HomeScreen}
                 name="Workspace"

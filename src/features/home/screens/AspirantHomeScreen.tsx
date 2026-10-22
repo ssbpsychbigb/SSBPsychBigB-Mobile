@@ -7,7 +7,15 @@ import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { BookOpen, ChevronRight, Target } from 'lucide-react-native';
 
 import { useAppTabsActions } from '@/app/navigation/AppTabsContext';
+import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import { useAuthStore } from '@/features/auth';
+import { CourseLearningCard } from '@/features/learn/components/CourseLearningCard';
+import {
+  useClaimDailyMissionMutation,
+  useDailyMissionQuery,
+} from '@/features/learn/hooks/useCoursePathQueries';
+import { useMyLearningQuery } from '@/features/learn/hooks/useCourseQueries';
+import { showErrorToast, showToast } from '@/shared/ui/toast';
 import { getRoleLabel } from '@/features/home/lib/role-label';
 import { getUserInitials } from '@/features/home/lib/user-initials';
 import { APP_CONFIG } from '@/shared/constants/config';
@@ -21,7 +29,13 @@ import { AppText, Screen } from '@/shared/ui';
 export function AspirantHomeScreen() {
   const theme = useTheme();
   const { jumpTo } = useAppTabsActions();
+  const goRoot = useRootNavigate();
   const user = useAuthStore((state) => state.user);
+  const mine = useMyLearningQuery(Boolean(user));
+  const mission = useDailyMissionQuery(Boolean(user));
+  const claimMission = useClaimDailyMissionMutation();
+  const resume = mine.data?.items?.[0];
+  const today = mission.data;
 
   const displayName = user?.fullName?.trim() || APP_CONFIG.appName;
   const examGoal = user?.examGoal || user?.examGoals?.[0];
@@ -68,21 +82,57 @@ export function AspirantHomeScreen() {
           {"Today's mission"}
         </AppText>
         <AppText color="inverse" style={styles.missionTitle} variant="subtitle">
-          Warm up with 10 minutes of focused practice
+          {today?.streakHint || 'Warm up with focused practice'}
         </AppText>
-        <AppText color="inverse" style={styles.missionBody} variant="caption">
-          Consistency beats intensity. Open My Course from the center button to
-          continue your prep.
-        </AppText>
+        {today?.tasks?.length ? (
+          today.tasks.slice(0, 3).map((task) => (
+            <AppText key={task.id} color="inverse" variant="caption">
+              {task.done ? '✓' : '○'} {task.label}
+              {task.target > 1 ? `  ${task.current}/${task.target}` : ''}
+            </AppText>
+          ))
+        ) : (
+          <AppText color="inverse" style={styles.missionBody} variant="caption">
+            Consistency beats intensity. Open Learn to continue your prep.
+          </AppText>
+        )}
         <Pressable
           accessibilityRole="button"
-          onPress={() => jumpTo('myCourse')}
+          onPress={() => {
+            if (today?.complete && !today.claimed) {
+              claimMission.mutate(undefined, {
+                onSuccess: () => showToast.success('Mission claimed'),
+                onError: (error) => showErrorToast(error, 'Could not claim'),
+              });
+              return;
+            }
+            const next = today?.continueCourse;
+            if (next?.lastLessonId) {
+              goRoot('LessonPlayer', {
+                slug: next.slug,
+                lessonId: next.lastLessonId,
+              });
+              return;
+            }
+            if (resume?.continueLesson) {
+              goRoot('LessonPlayer', {
+                slug: resume.course.slug,
+                lessonId: resume.continueLesson.id,
+              });
+              return;
+            }
+            jumpTo('myCourse');
+          }}
           style={({ pressed }) => [
             styles.missionCta,
             { opacity: pressed ? 0.88 : 1 },
           ]}>
           <AppText color="brand" variant="label">
-            Start learning
+            {today?.complete && !today.claimed
+              ? 'Claim today'
+              : resume
+                ? 'Continue'
+                : 'Start learning'}
           </AppText>
           <ChevronRight color={theme.colors.primary} size={ms(18)} />
         </Pressable>
@@ -94,30 +144,47 @@ export function AspirantHomeScreen() {
         <AppText style={styles.sectionTitle} variant="subtitle">
           Continue learning
         </AppText>
-        <View
-          style={[
-            styles.learningEmpty,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}>
-          <BookOpen color={theme.colors.textMuted} size={ms(22)} />
-          <View style={styles.learningCopy}>
-            <AppText variant="label">No course in progress yet</AppText>
-            <AppText color="secondary" variant="caption">
-              When you start a course, it will show up here for one-tap resume.
-            </AppText>
+        {resume ? (
+          <CourseLearningCard
+            item={resume}
+            onContinue={() => {
+              if (resume.continueLesson) {
+                goRoot('LessonPlayer', {
+                  slug: resume.course.slug,
+                  lessonId: resume.continueLesson.id,
+                });
+                return;
+              }
+              goRoot('CourseDetail', { slug: resume.course.slug });
+            }}
+            onPress={() => goRoot('CourseDetail', { slug: resume.course.slug })}
+          />
+        ) : (
+          <View
+            style={[
+              styles.learningEmpty,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}>
+            <BookOpen color={theme.colors.textMuted} size={ms(22)} />
+            <View style={styles.learningCopy}>
+              <AppText variant="label">No course in progress yet</AppText>
+              <AppText color="secondary" variant="caption">
+                When you start a course, it will show up here for one-tap resume.
+              </AppText>
+            </View>
+            <Pressable
+              accessibilityRole="button"
+              hitSlop={ms(8)}
+              onPress={() => jumpTo('myCourse')}>
+              <AppText color="brand" variant="label">
+                Browse
+              </AppText>
+            </Pressable>
           </View>
-          <Pressable
-            accessibilityRole="button"
-            hitSlop={ms(8)}
-            onPress={() => jumpTo('myCourse')}>
-            <AppText color="brand" variant="label">
-              Browse
-            </AppText>
-          </Pressable>
-        </View>
+        )}
       </Animated.View>
 
       <Animated.View

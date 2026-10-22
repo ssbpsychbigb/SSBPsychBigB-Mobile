@@ -3,7 +3,15 @@
  */
 
 import type { ReactElement, ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View, type RefreshControlProps } from 'react-native';
+import {
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+  type NativeScrollEvent,
+  type NativeSyntheticEvent,
+  type RefreshControlProps,
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
 
@@ -23,6 +31,7 @@ export type SocialStackChromeProps = {
   /** False on tab destinations that already have a bottom bar. */
   showBack?: boolean;
   refreshControl?: ReactElement<RefreshControlProps>;
+  onNearEnd?: () => void;
 };
 
 /**
@@ -37,6 +46,7 @@ export function SocialStackChrome({
   showBack = true,
   subtitleLines = 1,
   refreshControl,
+  onNearEnd,
 }: SocialStackChromeProps) {
   const theme = useTheme();
   const navigation = useNavigation();
@@ -46,10 +56,7 @@ export function SocialStackChrome({
       contentStyle={styles.shell}
       padded={false}
       safeBottom={false}
-      style={{
-        backgroundColor:
-          theme.mode === 'dark' ? theme.colors.background : theme.palette.primary[50],
-      }}>
+      style={{ backgroundColor: theme.colors.background }}>
       <ScreenHeader
         style={subtitleLines > 1 ? styles.headerMultiline : undefined}>
         {showBack ? (
@@ -84,7 +91,21 @@ export function SocialStackChrome({
         contentContainerStyle={styles.scrollBody}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
+        onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {
+          if (!onNearEnd) {
+            return;
+          }
+          const { layoutMeasurement, contentOffset, contentSize } =
+            event.nativeEvent;
+          if (
+            layoutMeasurement.height + contentOffset.y >=
+            contentSize.height - 280
+          ) {
+            onNearEnd();
+          }
+        }}
         refreshControl={refreshControl}
+        scrollEventThrottle={400}
         showsVerticalScrollIndicator={false}
         style={styles.flex}>
         <View style={styles.content}>{children}</View>
@@ -117,7 +138,6 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   right: {
-    minWidth: ms(40),
     alignItems: 'flex-end',
     marginLeft: ms(8),
   },
