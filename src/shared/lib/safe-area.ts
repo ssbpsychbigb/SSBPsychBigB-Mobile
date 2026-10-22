@@ -17,6 +17,7 @@ export const SCREEN_TOP_GAP = vs(4);
 
 const ANDROID_FALLBACK_TOP = 24;
 const IOS_FALLBACK_TOP = 47;
+const ANDROID_FALLBACK_BOTTOM = 20;
 
 export type SafeTopInsetInput = {
   insetsTop: number;
@@ -66,4 +67,19 @@ export function useSafeTopInset(): number {
  */
 export function useScreenTopPadding(gap: number = SCREEN_TOP_GAP): number {
   return useSafeTopInset() + gap;
+}
+
+/**
+ * Home-indicator / nav-bar height. Android often reports 0 with a translucent bar.
+ */
+export function useScreenBottomPadding(min: number = vs(12)): number {
+  const insets = useSafeAreaInsets();
+  const fromMetrics = initialWindowMetrics?.insets.bottom ?? 0;
+  const raw = Math.max(insets.bottom, fromMetrics);
+  if (raw > 0) {
+    return Math.max(raw, min);
+  }
+  return Platform.OS === 'android'
+    ? Math.max(ANDROID_FALLBACK_BOTTOM, min)
+    : Math.max(min, 16);
 }
