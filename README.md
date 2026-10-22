@@ -240,12 +240,35 @@ Full club product (create, join approve, rooms, dual-key delete) is tracked in:
 
 Same `/api/v1/communities…` contract as web. Super Admin quota stays admin web.
 
+## Learning (mobile)
+
+Student Learn / My Course (Udemy-style browse, buy, watch). **No course create/edit on mobile.** Phases and API contract:
+
+- [`docs/LEARNING.md`](./docs/LEARNING.md)
+
+Same `/api/v1/courses` + `/payments` as web. Studio + admin moderation stay web.
+
+Ship **one phase at a time** from that file (0 foundation → 1 explore/library → 2 player → 3 checkout → extras).
+
+## Assessments (mobile)
+
+Student tests (practice, mock, OIR, WAT, SRT, PPDT, TAT). **No test create, edit, or grading on mobile.** In-lesson quizzes stay in Learning. Phases and API contract:
+
+- [`docs/ASSESSMENTS.md`](./docs/ASSESSMENTS.md)
+
+Same `/api/v1/assessments` as web. Studio + admin moderation stay web. Standalone paid checkout waits until the backend can record an assessment order.
+
+Ship **one phase at a time** from that file (0 foundation → 1 catalogue/detail → 2 player/result → result depth → history → course link/leaderboard).
+
 ## Planned Mobile Modules
 
-Auth, Feed, Chat, Reels, Network, public Profile, and Community are live. Remaining product work is listed only in [`docs/SOCIAL-MEDIA.md`](./docs/SOCIAL-MEDIA.md) (ops rebuild + web-only editors).
+Auth, Feed, Chat, Reels, Network, public Profile, and Community are live. Remaining social ops work is listed in [`docs/SOCIAL-MEDIA.md`](./docs/SOCIAL-MEDIA.md).
 
-Still later on mobile (not social P0):
+Learning is tracked only in [`docs/LEARNING.md`](./docs/LEARNING.md) — do not invent a second course model.
 
-- Learning / My Course
+Assessments are tracked only in [`docs/ASSESSMENTS.md`](./docs/ASSESSMENTS.md) — do not invent a second test model, and do not fold them into the lesson player.
+
+Still later on mobile (not Learning P0):
+
 - AI mentor
 - Profile **edit** (privacy, cover crop) — use web `/profile/edit` for now
