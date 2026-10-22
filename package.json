@@ -7,7 +7,7 @@
     "apk:client": "node scripts/build-client-apk.js",
     "ios": "react-native run-ios",
     "lint": "eslint .",
-    "start": "node api.js && react-native start --reset-cache",
+    "start": "node init && react-native start --reset-cache",
     "test": "jest",
     "typecheck": "tsc --noEmit"
   },
@@ -37,6 +37,7 @@
     "react-native-tab-view": "^4.3.2",
     "react-native-toast-message": "2.4.0",
     "react-native-video": "^6.19.2",
+    "react-native-webview": "^14.0.1",
     "react-native-worklets": "0.12.1",
     "socket.io-client": "^4.8.3",
     "zod": "^4.4.3",
