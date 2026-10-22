@@ -7,10 +7,12 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import { TouchableOpacity } from 'react-native-gesture-handler';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import {
+  Award,
   Bell,
   Bookmark,
   Briefcase,
   Hash,
+  Heart,
   LogOut,
   Mail,
   MessageCircle,
@@ -180,6 +182,16 @@ export function ProfileScreen() {
             icon={<Bookmark color={theme.colors.primary} size={ms(18)} />}
             label="Saved"
             onPress={() => goRoot('Bookmarks')}
+          />
+          <DiscoverTile
+            icon={<Heart color={theme.colors.primary} size={ms(18)} />}
+            label="Wishlist"
+            onPress={() => goRoot('CourseWishlist')}
+          />
+          <DiscoverTile
+            icon={<Award color={theme.colors.primary} size={ms(18)} />}
+            label="Certificates"
+            onPress={() => goRoot('MyCertificates')}
           />
           <DiscoverTile
             icon={<Users color={theme.colors.primary} size={ms(18)} />}
