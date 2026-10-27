@@ -10,10 +10,18 @@ import type {
   NetworkSuggestionsPage,
 } from '@/features/network/types/network.types';
 
-function withCursor(path: string, cursor?: string | null, limit = 24): string {
+function withCursor(
+  path: string,
+  cursor?: string | null,
+  limit = 24,
+  role?: string | null,
+): string {
   const search = new URLSearchParams();
   if (cursor) {
     search.set('cursor', cursor);
+  }
+  if (role && role !== 'all') {
+    search.set('role', role);
   }
   search.set('limit', String(limit));
   const qs = search.toString();
@@ -28,9 +36,10 @@ export const networkApi = {
   getSuggestions(
     token?: string | null,
     cursor?: string | null,
+    role?: string | null,
   ): Promise<NetworkSuggestionsPage> {
     return apiRequest<NetworkSuggestionsPage>(
-      withCursor('/profile/me/suggestions', cursor),
+      withCursor('/profile/me/suggestions', cursor, 24, role),
       { token },
     );
   },

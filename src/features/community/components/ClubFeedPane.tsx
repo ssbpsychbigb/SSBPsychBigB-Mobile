@@ -4,17 +4,18 @@
 
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 import { Pressable, Share, StyleSheet, View } from 'react-native';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Pin, Trash2 } from 'lucide-react-native';
 
 import { useAuthStore } from '@/features/auth/store/auth.store';
-import { toMultipartFilePart } from '@/features/auth/lib/upload-asset';
-import type { PickedAsset } from '@/features/auth/types/register-form';
+import type { FeedComposeInput } from '@/features/feed/components/FeedComposeSheet';
+import { resolveComposeMedia } from '@/features/feed/lib/upload-post-image';
 import { getUserInitials } from '@/features/home/lib/user-initials';
 import { feedApi } from '@/features/feed/api/feed.api';
 import { FeedCommentsSheet } from '@/features/feed/components/FeedCommentsSheet';
 import { FeedComposeSheet } from '@/features/feed/components/FeedComposeSheet';
 import { FeedPostCard } from '@/features/feed/components/FeedPostCard';
+import { bookmarkKeys } from '@/features/feed/hooks/usePostQueries';
 import {
   useClubPostModerateMutation,
   useCommunityFeedQuery,
@@ -41,10 +42,6 @@ type FeedEntry = {
   card: ReturnType<typeof toFeedCardPost>;
 };
 
-function appendImagePart(formData: FormData, asset: PickedAsset): void {
-  formData.append('media', toMultipartFilePart(asset, 'media') as unknown as Blob);
-}
-
 type SessionValue = {
   props: ClubFeedPaneProps;
   token: string | null;
@@ -64,8 +61,9 @@ type SessionValue = {
   setRemovePostId: (id: string | null) => void;
   menuPost: FeedEntry['api'] | undefined;
   composeBusy: boolean;
-  onCompose: (input: { content: string; image?: PickedAsset }) => void;
+  onCompose: (input: FeedComposeInput) => void;
   onLike: (postId: string) => void;
+  onSave: (postId: string) => void;
   onRefetch: () => void;
   moderateBusy: boolean;
   onPin: (postId: string, pinned: boolean) => void;
@@ -90,6 +88,7 @@ export function ClubFeedProvider({
   ...props
 }: ClubFeedPaneProps & { children: ReactNode }) {
   const { community, canPreview, canAct, mode, onNeedJoin } = props;
+  const queryClient = useQueryClient();
   const token = useAuthStore((state) => state.accessToken);
   const displayName = useAuthStore((state) => state.user?.fullName);
   const selfId = useAuthStore((state) => state.user?.id);
@@ -114,17 +113,12 @@ export function ClubFeedProvider({
   const menuPost = posts.find((entry) => entry.api.id === menuPostId)?.api;
 
   const composeMutation = useMutation({
-    mutationFn: async (input: { content: string; image?: PickedAsset }) => {
+    mutationFn: async (input: FeedComposeInput) => {
       if (!token) {
         throw new Error('Not signed in');
       }
-      let media: Array<{ url: string; thumbnail?: string; mediaType?: string }> | undefined;
-      if (input.image) {
-        const formData = new FormData();
-        appendImagePart(formData, input.image);
-        const uploaded = await feedApi.uploadMedia(formData, token);
-        media = uploaded.media;
-      }
+      const uploaded = await resolveComposeMedia(input.media ?? [], token);
+      const media = uploaded.length ? uploaded : undefined;
       return feedApi.createPost(
         {
           content: input.content,
@@ -157,6 +151,18 @@ export function ClubFeedProvider({
     },
   });
 
+  const saveMutation = useMutation({
+    mutationFn: (postId: string) => feedApi.toggleBookmark(postId, token as string),
+    onSuccess: (result) => {
+      void feedQuery.refetch();
+      void queryClient.invalidateQueries({ queryKey: bookmarkKeys.all });
+      showToast.success(result.bookmarked ? 'Saved' : 'Removed from Saved');
+    },
+    onError: (error) => {
+      showErrorToast(error, 'Could not update bookmark.', 'Community');
+    },
+  });
+
   const value: SessionValue = {
     props,
     token,
@@ -185,6 +191,13 @@ export function ClubFeedProvider({
         return;
       }
       likeMutation.mutate(postId);
+    },
+    onSave: (postId) => {
+      if (!canAct || !token) {
+        onNeedJoin();
+        return;
+      }
+      saveMutation.mutate(postId);
     },
     onRefetch: () => {
       void feedQuery.refetch();
@@ -233,6 +246,7 @@ export function ClubFeedPane() {
     setCommentPostId,
     setMenuPostId,
     onLike,
+    onSave,
   } = useClubFeedSession();
   const initials = getUserInitials(displayName);
 
@@ -324,11 +338,7 @@ export function ClubFeedPane() {
             }
           }}
           onReact={() => onLike(entry.api.id)}
-          onSave={() => {
-            if (!canAct) {
-              onNeedJoin();
-            }
-          }}
+          onSave={() => onSave(entry.api.id)}
           onShare={() => {
             void Share.share({ message: entry.card.body || entry.card.author.name });
           }}

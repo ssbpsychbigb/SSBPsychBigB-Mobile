@@ -19,6 +19,7 @@ export type FeedMediaItem = {
   url: string;
   thumbnail?: string;
   duration?: number | null;
+  audioMuted?: boolean;
 };
 
 export type FeedAuthor = {
@@ -55,6 +56,7 @@ export type FeedPost = {
   categories?: string[];
   hashtags?: string[];
   pinnedAt?: string | null;
+  editedAt?: string | null;
 };
 
 export type FeedComment = {
@@ -65,7 +67,17 @@ export type FeedComment = {
   createdAt: string;
   likesCount?: number;
   liked?: boolean;
+  pinnedAt?: string | null;
   author: FeedAuthor | null;
+};
+
+export type DirectoryPerson = {
+  id: string;
+  fullName: string;
+  username: string;
+  role: string;
+  instituteName: string;
+  profilePhotoPath: string;
 };
 
 export type FeedPage = {
@@ -95,8 +107,14 @@ export type CreatePostInput = {
     url: string;
     thumbnail?: string;
     mediaType?: string;
+    audioMuted?: boolean;
   }>;
+  status?: 'draft' | 'published';
 };
+
+export type UpdatePostInput = Partial<
+  Pick<CreatePostInput, 'content' | 'visibility' | 'media' | 'status'>
+>;
 
 export type DayBriefItem = {
   id: string;

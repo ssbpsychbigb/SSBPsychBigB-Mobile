@@ -58,12 +58,15 @@ export type RootStackParamList = {
   Messages: undefined;
   ChatThread: { conversationId: string; name?: string; username?: string };
   MemberProfile: { username: string; name?: string };
+  EditProfile: undefined;
   MemberNetwork: {
     username: string;
     name?: string;
     kind: 'followers' | 'following' | 'mutual';
   };
   Notifications: undefined;
+  PostDetail: { postId: string; openComments?: boolean };
+  Search: undefined;
   ClubHome: { slug: string; invite?: string };
   CreateCommunity: undefined;
   CourseDetail: { slug: string };

@@ -4,7 +4,7 @@
  */
 
 import { useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Trophy } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -20,7 +20,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store';
 import { LearnEmptyState } from '@/features/learn/components/LearnEmptyState';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome } from '@/shared/ui';
+import { AppText, SocialStackChrome, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AssessmentLeaderboard'>;
@@ -45,15 +45,11 @@ export function AssessmentLeaderboardScreen({ route }: Props) {
   const data = board.data;
   const visibleScopes = SCOPES.filter((item) => (data?.scopes ? data.scopes[item.key] : item.id === 'national'));
 
+  const refreshControl = usePullToRefresh(() => board.refetch());
+
   return (
     <SocialStackChrome
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => void board.refetch()}
-          refreshing={Boolean(board.isRefetching && board.data)}
-          tintColor={theme.colors.primary}
-        />
-      }
+      refreshControl={refreshControl}
       subtitle={data?.title || 'Best score on this test.'}
       subtitleLines={2}
       title="Leaderboard">

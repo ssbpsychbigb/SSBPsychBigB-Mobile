@@ -1,29 +1,13 @@
 /**
- * Profile tab — guest join, account summary, workspace, session controls.
+ * You tab — Instagram-shaped own profile: username, photo + counts, name, grid.
+ * Saved and the rest of the account live in the ⋯ sheet.
  */
 
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
-import { TouchableOpacity } from 'react-native-gesture-handler';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import {
-  Award,
-  Bell,
-  Bookmark,
-  Briefcase,
-  Hash,
-  Heart,
-  LogOut,
-  Mail,
-  MessageCircle,
-  Phone,
-  Shield,
-  UserRound,
-  Users,
-} from 'lucide-react-native';
+import { useState } from 'react';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { useQuery } from '@tanstack/react-query';
+import { MoreHorizontal, UserRound } from 'lucide-react-native';
 
-import { FAB_SIZE } from '@/app/navigation/CustomFloatingTabBar';
-import { useAppTabsActions } from '@/app/navigation/AppTabsContext';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import {
   getActiveInstituteProfile,
@@ -34,316 +18,292 @@ import {
   useOpenAuth,
   useSwitchEducatorProfile,
 } from '@/features/auth';
-import { getRoleLabel } from '@/features/home/lib/role-label';
+import { formatCount } from '@/features/feed/lib/to-feed-card-post';
 import { getUserInitials } from '@/features/home/lib/user-initials';
-import { requireMemberProfileParams } from '@/features/profile/lib/require-member-profile';
+import { profileApi } from '@/features/profile/api/profile.api';
+import { shareMemberProfile } from '@/features/profile/components/MemberProfileTabs';
+import {
+  ProfileMenuSheet,
+  type ProfileMenuKey,
+} from '@/features/profile/components/ProfileMenuSheet';
+import { ProfilePostGrid } from '@/features/profile/components/ProfilePostGrid';
 import { APP_CONFIG } from '@/shared/constants/config';
 import { ms, s, vs } from '@/shared/lib/responsive';
+import { resolveUploadUrl } from '@/shared/lib/resolve-upload-url';
 import { useTheme } from '@/shared/theme';
 import { AppText, Button, Screen, ScreenHeader } from '@/shared/ui';
 
 /**
- * Guest join surface or signed-in profile overview.
+ * Guest join surface or signed-in profile.
  */
 export function ProfileScreen() {
   const theme = useTheme();
   const goRoot = useRootNavigate();
-  const { jumpTo } = useAppTabsActions();
   const user = useAuthStore((state) => state.user);
   const accessToken = useAuthStore((state) => state.accessToken);
   const openRegister = useOpenAuth('Register');
   const openLogin = useOpenAuth('Login');
   const logout = useLogout();
-  const {
-    canSwitchToFreelancer,
-    isSwitching,
-    switchToFreelancer,
-  } = useSwitchEducatorProfile();
+  const { canSwitchToFreelancer, isSwitching, switchToFreelancer } =
+    useSwitchEducatorProfile();
   const activeInstitute = getActiveInstituteProfile(user);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const displayName = user?.fullName?.trim() || APP_CONFIG.appName;
   const initials = getUserInitials(user?.fullName);
-  const examGoal = user?.examGoal || user?.examGoals?.join(', ');
+  const photo = resolveUploadUrl(user?.profilePhotoPath || user?.officerPhotoPath);
   const showWorkspace =
-    Boolean(user) &&
-    (isInstitutePanelUser(user) || isFreelancerEducator(user));
+    Boolean(user) && (isInstitutePanelUser(user) || isFreelancerEducator(user));
+
+  const statsQuery = useQuery({
+    queryKey: ['member-profile', user?.username ?? ''],
+    enabled: Boolean(accessToken && user?.username),
+    queryFn: () => profileApi.getByUsername(user!.username!, accessToken),
+  });
+  const stats = statsQuery.data?.stats;
+  const bio = statsQuery.data?.bio?.trim();
+  const city = statsQuery.data?.city?.trim() || activeInstitute?.instituteName?.trim();
+
+  const shareSelf = () => {
+    if (statsQuery.data) {
+      shareMemberProfile(statsQuery.data, displayName);
+      return;
+    }
+    if (user?.username) {
+      shareMemberProfile(
+        {
+          id: user.id,
+          username: user.username,
+          fullName: displayName,
+          role: user.role,
+          profileUrl: `/u/${user.username}`,
+        },
+        displayName,
+      );
+    }
+  };
+
+  const onMenu = (key: ProfileMenuKey) => {
+    setMenuOpen(false);
+    if (key === 'saved') {
+      goRoot('Bookmarks');
+      return;
+    }
+    if (key === 'wishlist') {
+      goRoot('CourseWishlist');
+      return;
+    }
+    if (key === 'certificates') {
+      goRoot('MyCertificates');
+      return;
+    }
+    if (key === 'network') {
+      goRoot('Network');
+      return;
+    }
+    if (key === 'account') {
+      goRoot('EditProfile');
+      return;
+    }
+    if (key === 'workspace') {
+      goRoot('Workspace');
+      return;
+    }
+    if (key === 'freelancer') {
+      void switchToFreelancer();
+      return;
+    }
+    logout();
+  };
 
   if (!accessToken) {
     return (
-      <Screen contentStyle={styles.content} safeBottom={false} scroll>
+      <Screen contentStyle={styles.guestBody} safeBottom={false} scroll>
         <ScreenHeader padded={false}>
           <AppText variant="subtitle" weight="bold">
             Profile
           </AppText>
         </ScreenHeader>
-        <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
-          <View
-            style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
+        <View style={styles.guest}>
+          <View style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
             <UserRound color="#FFFFFF" size={ms(32)} strokeWidth={2} />
           </View>
-          <AppText style={styles.name} variant="subtitle" weight="bold">
-            You
-          </AppText>
-          <AppText color="secondary" style={styles.guestLead} variant="body">
-            Join BIGB to follow officers, save posts, message mentors, and keep
-            your prep in one place. Public Reels are on the Reels tab. Network
-            and Community are open to browse now.
-          </AppText>
-        </Animated.View>
-        <View style={styles.section}>
-          <AppText color="muted" style={styles.sectionLabel} variant="caption">
-            Browse public
-          </AppText>
-          <View style={styles.discoverGrid}>
-            <DiscoverTile
-              icon={<Users color={theme.colors.primary} size={ms(18)} />}
-              label="Network"
-              onPress={() => goRoot('Network')}
-            />
-            <DiscoverTile
-              icon={<Hash color={theme.colors.primary} size={ms(18)} />}
-              label="Community"
-              onPress={() => jumpTo('communities')}
-            />
-            <DiscoverTile
-              icon={<MessageCircle color={theme.colors.primary} size={ms(18)} />}
-              label="Messages"
-              onPress={() => goRoot('Messages')}
-            />
-          </View>
-        </View>
-        <View style={styles.footer}>
-          <Button fullWidth onPress={openRegister}>
+          <AppText style={styles.center} variant="subtitle" weight="bold">
             Join BIGB
-          </Button>
-          <Button fullWidth onPress={openLogin} variant="secondary">
-            Log in
-          </Button>
+          </AppText>
+          <AppText color="secondary" style={styles.guestLead} variant="caption">
+            Follow officers, save posts, and keep your prep in one place.
+          </AppText>
+        </View>
+        <View style={styles.actions}>
+          <View style={styles.action}>
+            <Button fullWidth onPress={openRegister} size="md">
+              Join BIGB
+            </Button>
+          </View>
+          <View style={styles.action}>
+            <Button fullWidth onPress={openLogin} size="md" variant="secondary">
+              Log in
+            </Button>
+          </View>
         </View>
       </Screen>
     );
   }
 
   return (
-    <Screen contentStyle={styles.content} safeBottom={false} scroll>
-      <ScreenHeader padded={false}>
-        <AppText variant="subtitle" weight="bold">
-          You
-        </AppText>
-      </ScreenHeader>
-      <Animated.View entering={FadeInDown.duration(400)} style={styles.hero}>
-        <View
-          style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
-          <AppText color="inverse" variant="subtitle" weight="bold">
-            {initials}
+    <Screen contentStyle={styles.body} padded={false} safeBottom={false} scroll>
+      <View style={styles.pad}>
+        <ScreenHeader padded={false}>
+          <AppText numberOfLines={1} style={styles.handle} variant="subtitle" weight="bold">
+            {user?.username || displayName}
           </AppText>
+          <Pressable
+            accessibilityLabel="More"
+            accessibilityRole="button"
+            hitSlop={ms(10)}
+            onPress={() => setMenuOpen(true)}
+            style={styles.menuBtn}>
+            <MoreHorizontal color={theme.colors.text} size={ms(24)} strokeWidth={2} />
+          </Pressable>
+        </ScreenHeader>
+
+        <View style={styles.identity}>
+          <Pressable
+            accessibilityLabel="Edit profile photo"
+            onPress={() => goRoot('EditProfile')}
+            style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
+            {photo ? (
+              <Image source={{ uri: photo }} style={styles.avatarImage} />
+            ) : (
+              <AppText color="inverse" variant="subtitle" weight="bold">
+                {initials}
+              </AppText>
+            )}
+          </Pressable>
+
+          <View style={styles.stats}>
+            <Stat label="Posts" value={stats?.posts} />
+            <Stat
+              label="Followers"
+              onPress={
+                user?.username
+                  ? () =>
+                      goRoot('MemberNetwork', {
+                        username: user.username!,
+                        name: displayName,
+                        kind: 'followers',
+                      })
+                  : undefined
+              }
+              value={stats?.followers}
+            />
+            <Stat
+              label="Following"
+              onPress={
+                user?.username
+                  ? () =>
+                      goRoot('MemberNetwork', {
+                        username: user.username!,
+                        name: displayName,
+                        kind: 'following',
+                      })
+                  : undefined
+              }
+              value={stats?.following}
+            />
+          </View>
         </View>
-        <AppText style={styles.name} variant="subtitle" weight="bold">
+
+        <AppText numberOfLines={1} variant="label">
           {displayName}
         </AppText>
-        <View
-          style={[
-            styles.roleBadge,
-            { backgroundColor: theme.colors.primaryMuted },
-          ]}>
-          <Shield color={theme.colors.primary} size={ms(14)} />
-          <AppText color="brand" variant="caption">
-            {getRoleLabel(user?.role)}
-            {user?.accountStatus === 'active' ? ' · Active' : ''}
-          </AppText>
-        </View>
-        {activeInstitute ? (
-          <AppText color="secondary" style={styles.contextHint} variant="caption">
-            Currently in {activeInstitute.instituteName || 'institute'} mode
+        {bio ? (
+          <AppText numberOfLines={3} style={styles.bio} variant="caption">
+            {bio}
           </AppText>
         ) : null}
-        {user?.username ? (
-          <Pressable
-            onPress={() => {
-              const params = requireMemberProfileParams(user.username, user.fullName);
-              if (params) {
-                goRoot('MemberProfile', params);
-              }
-            }}
-            style={styles.publicLink}>
-            <AppText color="brand" variant="caption" weight="semibold">
-              View public profile
-            </AppText>
-          </Pressable>
+        {city ? (
+          <AppText color="muted" numberOfLines={1} variant="caption">
+            {city}
+          </AppText>
         ) : null}
-      </Animated.View>
 
-      <View style={styles.section}>
-        <AppText color="muted" style={styles.sectionLabel} variant="caption">
-          Discover
-        </AppText>
-        <View style={styles.discoverGrid}>
-          <DiscoverTile
-            icon={<Bookmark color={theme.colors.primary} size={ms(18)} />}
-            label="Saved"
-            onPress={() => goRoot('Bookmarks')}
+        <View style={styles.actions}>
+          <Pill
+            label="Edit profile"
+            onPress={() => goRoot('EditProfile')}
+            tone={theme.mode === 'dark' ? theme.colors.surface : theme.palette.neutral[100]}
+            text={theme.colors.text}
           />
-          <DiscoverTile
-            icon={<Heart color={theme.colors.primary} size={ms(18)} />}
-            label="Wishlist"
-            onPress={() => goRoot('CourseWishlist')}
-          />
-          <DiscoverTile
-            icon={<Award color={theme.colors.primary} size={ms(18)} />}
-            label="Certificates"
-            onPress={() => goRoot('MyCertificates')}
-          />
-          <DiscoverTile
-            icon={<Users color={theme.colors.primary} size={ms(18)} />}
-            label="Network"
-            onPress={() => goRoot('Network')}
-          />
-          <DiscoverTile
-            icon={<Hash color={theme.colors.primary} size={ms(18)} />}
-            label="Community"
-            onPress={() => jumpTo('communities')}
-          />
-          <DiscoverTile
-            icon={<MessageCircle color={theme.colors.primary} size={ms(18)} />}
-            label="Messages"
-            onPress={() => goRoot('Messages')}
-          />
-          <DiscoverTile
-            icon={<Bell color={theme.colors.primary} size={ms(18)} />}
-            label="Alerts"
-            onPress={() => goRoot('Notifications')}
+          <Pill
+            label="Share profile"
+            onPress={shareSelf}
+            tone={theme.mode === 'dark' ? theme.colors.surface : theme.palette.neutral[100]}
+            text={theme.colors.text}
           />
         </View>
       </View>
 
-      <View style={styles.section}>
-        <AppText color="muted" style={styles.sectionLabel} variant="caption">
-          Account
-        </AppText>
-        <View
-          style={[
-            styles.panel,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}>
-          <View style={styles.row}>
-            <Phone color={theme.colors.textMuted} size={ms(18)} />
-            <View style={styles.rowCopy}>
-              <AppText color="muted" variant="caption">
-                Mobile
-              </AppText>
-              <AppText variant="body">
-                {user?.mobileNumber || '—'}
-              </AppText>
-            </View>
-          </View>
-          <View
-            style={[styles.divider, { backgroundColor: theme.colors.border }]}
-          />
-          <View style={styles.row}>
-            <Mail color={theme.colors.textMuted} size={ms(18)} />
-            <View style={styles.rowCopy}>
-              <AppText color="muted" variant="caption">
-                Email
-              </AppText>
-              <AppText variant="body">{user?.email || '—'}</AppText>
-            </View>
-          </View>
-          {examGoal ? (
-            <>
-              <View
-                style={[
-                  styles.divider,
-                  { backgroundColor: theme.colors.border },
-                ]}
-              />
-              <View style={styles.row}>
-                <Shield color={theme.colors.textMuted} size={ms(18)} />
-                <View style={styles.rowCopy}>
-                  <AppText color="muted" variant="caption">
-                    Exam focus
-                  </AppText>
-                  <AppText variant="body">{examGoal}</AppText>
-                </View>
-              </View>
-            </>
-          ) : null}
-        </View>
-      </View>
+      {user?.username ? <ProfilePostGrid username={user.username} /> : null}
 
-      <View style={styles.footer}>
-        {showWorkspace ? (
-          <Button
-            fullWidth
-            onPress={() => goRoot('Workspace')}
-            variant="secondary">
-            <View style={styles.logoutRow}>
-              <Briefcase color={theme.colors.text} size={ms(18)} />
-              <AppText variant="label">Open workspace</AppText>
-            </View>
-          </Button>
-        ) : null}
-        {canSwitchToFreelancer ? (
-          <Button
-            fullWidth
-            loading={isSwitching}
-            onPress={() => {
-              void switchToFreelancer();
-            }}
-            variant="secondary">
-            <View style={styles.logoutRow}>
-              <UserRound color={theme.colors.text} size={ms(18)} />
-              <AppText variant="label">Switch to Freelancer</AppText>
-            </View>
-          </Button>
-        ) : null}
-        <TouchableOpacity
-          accessibilityRole="button"
-          activeOpacity={0.88}
-          onPress={logout}
-          style={[
-            styles.signOut,
-            {
-              backgroundColor: theme.colors.surface,
-              borderColor: theme.colors.border,
-            },
-          ]}>
-          <LogOut color={theme.colors.text} size={ms(18)} />
-          <AppText variant="label">Sign out</AppText>
-        </TouchableOpacity>
-        <AppText color="muted" style={styles.version} variant="caption">
-          {APP_CONFIG.appName} · v{APP_CONFIG.appVersion}
-        </AppText>
-      </View>
+      <ProfileMenuSheet
+        freelancerBusy={isSwitching}
+        onClose={() => setMenuOpen(false)}
+        onSelect={onMenu}
+        showFreelancer={canSwitchToFreelancer}
+        showWorkspace={showWorkspace}
+        visible={menuOpen}
+      />
     </Screen>
   );
 }
 
-type DiscoverTileProps = {
-  icon: ReactNode;
+function Stat({
+  label,
+  value,
+  onPress,
+}: {
+  label: string;
+  value?: number;
+  onPress?: () => void;
+}) {
+  return (
+    <Pressable
+      accessibilityRole={onPress ? 'button' : undefined}
+      disabled={!onPress}
+      onPress={onPress}
+      style={styles.stat}>
+      <AppText variant="subtitle" weight="bold">
+        {value == null ? '—' : formatCount(value)}
+      </AppText>
+      <AppText color="muted" variant="caption">
+        {label}
+      </AppText>
+    </Pressable>
+  );
+}
+
+function Pill({
+  label,
+  onPress,
+  tone,
+  text,
+}: {
   label: string;
   onPress: () => void;
-};
-
-function DiscoverTile({ icon, label, onPress }: DiscoverTileProps) {
-  const theme = useTheme();
-
+  tone: string;
+  text: string;
+}) {
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
       style={({ pressed }) => [
-        styles.tile,
-        {
-          backgroundColor: theme.colors.surface,
-          borderColor: theme.colors.border,
-          opacity: pressed ? 0.88 : 1,
-        },
+        styles.pill,
+        { backgroundColor: tone, opacity: pressed ? 0.82 : 1 },
       ]}>
-      {icon}
-      <AppText variant="caption" weight="semibold">
+      <AppText style={{ color: text }} variant="caption" weight="semibold">
         {label}
       </AppText>
     </Pressable>
@@ -351,109 +311,83 @@ function DiscoverTile({ icon, label, onPress }: DiscoverTileProps) {
 }
 
 const styles = StyleSheet.create({
-  content: {
-    // * Clears the floating tab bar and center FAB so Sign out stays tappable.
-    paddingBottom: vs(28) + FAB_SIZE,
+  body: {
+    paddingBottom: vs(8),
   },
-  hero: {
-    alignItems: 'center',
-    gap: ms(10),
-    marginBottom: vs(28),
-    marginTop: 0,
+  guestBody: {
+    paddingBottom: vs(24),
   },
-  avatar: {
-    width: ms(72),
-    height: ms(72),
-    borderRadius: ms(36),
+  pad: {
+    paddingHorizontal: s(16),
+  },
+  handle: {
+    flex: 1,
+    marginRight: s(12),
+  },
+  menuBtn: {
+    width: ms(36),
+    height: ms(36),
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: vs(4),
   },
-  name: {
+  identity: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(18),
+    marginTop: vs(4),
+    marginBottom: vs(12),
+  },
+  stats: {
+    flex: 1,
+    flexDirection: 'row',
+  },
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+    gap: vs(1),
+  },
+  bio: {
+    marginTop: vs(2),
+  },
+  avatar: {
+    width: ms(86),
+    height: ms(86),
+    borderRadius: ms(43),
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
+  guest: {
+    alignItems: 'center',
+    gap: vs(6),
+    marginBottom: vs(20),
+    marginTop: vs(24),
+  },
+  center: {
     textAlign: 'center',
   },
   guestLead: {
     textAlign: 'center',
-    maxWidth: s(300),
+    maxWidth: s(280),
   },
-  roleBadge: {
+  actions: {
     flexDirection: 'row',
-    alignItems: 'center',
-    gap: ms(6),
-    paddingHorizontal: s(12),
-    paddingVertical: vs(6),
-    borderRadius: ms(999),
+    gap: s(8),
+    marginTop: vs(14),
+    marginBottom: vs(4),
   },
-  contextHint: {
-    textAlign: 'center',
-  },
-  publicLink: {
-    marginTop: vs(8),
-  },
-  section: {
-    marginBottom: vs(24),
-  },
-  sectionLabel: {
-    marginBottom: vs(8),
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  discoverGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: ms(8),
-  },
-  tile: {
-    width: '48%',
-    flexGrow: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ms(8),
-    borderWidth: 1,
-    borderRadius: ms(14),
-    paddingHorizontal: s(12),
-    paddingVertical: vs(12),
-  },
-  panel: {
-    borderWidth: 1,
-    borderRadius: ms(16),
-    paddingHorizontal: s(16),
-    paddingVertical: vs(4),
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ms(12),
-    paddingVertical: vs(14),
-  },
-  rowCopy: {
+  action: {
     flex: 1,
-    gap: ms(2),
   },
-  divider: {
-    height: StyleSheet.hairlineWidth,
-    marginLeft: s(30),
-  },
-  footer: {
-    marginTop: 'auto',
-    gap: ms(12),
-  },
-  logoutRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ms(8),
-  },
-  signOut: {
-    minHeight: ms(44),
-    borderRadius: ms(12),
-    borderWidth: 1,
-    flexDirection: 'row',
+  pill: {
+    flex: 1,
+    height: ms(34),
+    borderRadius: ms(8),
     alignItems: 'center',
     justifyContent: 'center',
-    gap: ms(8),
-    paddingHorizontal: s(16),
-  },
-  version: {
-    textAlign: 'center',
   },
 });

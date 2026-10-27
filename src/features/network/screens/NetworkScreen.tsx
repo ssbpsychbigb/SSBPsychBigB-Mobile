@@ -3,7 +3,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users } from 'lucide-react-native';
 
@@ -28,7 +28,7 @@ import { requireMemberProfileParams } from '@/features/profile';
 import type { NetworkSuggestionsPage } from '@/features/network/types/network.types';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+import { AppText, SocialStackChrome, Spinner, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 /**
@@ -46,7 +46,7 @@ export function NetworkScreen() {
   const [joinOpen, setJoinOpen] = useState(false);
   const [filter, setFilter] = useState<NetworkFilterKey>('all');
 
-  const suggestionsQuery = useNetworkSuggestionsQuery(accessToken);
+  const suggestionsQuery = useNetworkSuggestionsQuery(accessToken, filter);
   const overviewQuery = useNetworkOverviewQuery(accessToken);
 
   const people = useMemo(() => {
@@ -71,7 +71,7 @@ export function NetworkScreen() {
     mutationFn: (userId: string) => feedApi.toggleFollow(userId, accessToken as string),
     onSuccess: (result, userId) => {
       queryClient.setQueryData(
-        networkKeys.suggestions(session),
+        networkKeys.suggestions(session, filter),
         (current: { pages: NetworkSuggestionsPage[]; pageParams: unknown[] } | undefined) => {
           if (!current) {
             return current;
@@ -137,21 +137,14 @@ export function NetworkScreen() {
     });
   };
 
+  const refreshControl = usePullToRefresh(() =>
+    Promise.all([suggestionsQuery.refetch(), ...(isAuthed ? [overviewQuery.refetch()] : [])]),
+  );
+
   return (
     <>
       <SocialStackChrome
-        refreshControl={
-          <RefreshControl
-            onRefresh={() => {
-              void suggestionsQuery.refetch();
-              if (isAuthed) {
-                void overviewQuery.refetch();
-              }
-            }}
-            refreshing={suggestionsQuery.isRefetching}
-            tintColor={theme.colors.primary}
-          />
-        }
+        refreshControl={refreshControl}
         subtitle="Officers, mentors, and academies that raise the quality of your prep."
         subtitleLines={2}
         title="Network">
@@ -223,7 +216,7 @@ export function NetworkScreen() {
           />
         ) : null}
 
-        {!suggestionsQuery.isPending && !suggestionsQuery.isError && people.length === 0 ? (
+        {!suggestionsQuery.isPending && !suggestionsQuery.isError && people.length === 0 && filter === 'all' ? (
           <EmptyCard
             copy={
               isAuthed
@@ -252,7 +245,7 @@ export function NetworkScreen() {
           </>
         ) : null}
 
-        {!suggestionsQuery.isPending && filter !== 'all' && list.length === 0 && people.length > 0 ? (
+        {!suggestionsQuery.isPending && filter !== 'all' && list.length === 0 ? (
           <EmptyCard
             copy="Switch to All to see everyone we can suggest."
             title="Nothing in this filter"
