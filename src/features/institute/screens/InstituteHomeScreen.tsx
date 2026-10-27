@@ -47,7 +47,7 @@ import { resolveFontFamily } from '@/shared/constants/fonts';
 import { ms, s, vs, fontSize, lineHeight } from '@/shared/lib/responsive';
 import { resolveUploadUrl } from '@/shared/lib/resolve-upload-url';
 import { useTheme } from '@/shared/theme';
-import { AppText, Button, ConfirmModal, Screen } from '@/shared/ui';
+import { AppText, Button, ConfirmModal, Screen, Spinner } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 const teamKeys = {
@@ -618,7 +618,7 @@ export function InstituteHomeScreen() {
         </View>
 
         {freelancersQuery.isLoading ? (
-          <ActivityIndicator color={theme.colors.primary} />
+          <Spinner size="small" />
         ) : null}
 
         {!freelancersQuery.isLoading && freelancers.length === 0 ? (
@@ -664,7 +664,7 @@ export function InstituteHomeScreen() {
         </AppText>
 
         {teamQuery.isLoading ? (
-          <ActivityIndicator color={theme.colors.primary} />
+          <Spinner size="small" />
         ) : null}
 
         {!teamQuery.isLoading && leaveRequests.length === 0 ? (
@@ -821,7 +821,7 @@ export function InstituteHomeScreen() {
         </View>
 
         {teamQuery.isLoading ? (
-          <ActivityIndicator color={theme.colors.primary} />
+          <Spinner size="small" />
         ) : null}
 
         {!teamQuery.isLoading && pending.length === 0 ? (

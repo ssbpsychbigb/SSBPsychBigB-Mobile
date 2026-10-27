@@ -65,7 +65,7 @@ export function ClubHomeScreen({ navigation, route }: Props) {
   const acceptRules = useAcceptCommunityRulesMutation(slug);
   const [room, setRoom] = useState<ClubRoomKey>('feed');
   const [joinOpen, setJoinOpen] = useState(false);
-  const [leaveOpen, setLeaveOpen] = useState(false);
+  const [confirm, setConfirm] = useState<null | 'leave' | 'cancel'>(null);
   const [chatBusy, setChatBusy] = useState(false);
 
   const canPreview = canPreviewClubContent(community);
@@ -241,7 +241,7 @@ export function ClubHomeScreen({ navigation, route }: Props) {
                 <Pressable
                   accessibilityRole="button"
                   disabled={memberBusy}
-                  onPress={() => setLeaveOpen(true)}
+                  onPress={() => setConfirm('leave')}
                   style={[
                     styles.joined,
                     {
@@ -257,7 +257,7 @@ export function ClubHomeScreen({ navigation, route }: Props) {
                 </Pressable>
                 <Pressable
                   accessibilityRole="button"
-                  onPress={() => setLeaveOpen(true)}
+                  onPress={() => setConfirm('leave')}
                   style={styles.leaveText}>
                   <AppText color="danger" variant="caption" weight="semibold">
                     Leave
@@ -267,8 +267,12 @@ export function ClubHomeScreen({ navigation, route }: Props) {
             ) : (
               <Pressable
                 accessibilityRole="button"
-                disabled={pending || memberBusy}
+                disabled={memberBusy}
                 onPress={() => {
+                  if (pending) {
+                    setConfirm('cancel');
+                    return;
+                  }
                   void requestJoin();
                 }}
                 style={[
@@ -282,7 +286,7 @@ export function ClubHomeScreen({ navigation, route }: Props) {
                   color={pending ? 'secondary' : 'inverse'}
                   variant="caption"
                   weight="semibold">
-                  {pending ? 'Requested' : 'Request to join'}
+                  {pending ? 'Cancel request' : 'Request to join'}
                 </AppText>
               </Pressable>
             )}
@@ -361,7 +365,7 @@ export function ClubHomeScreen({ navigation, route }: Props) {
                 {community.coAdminName ? ` · Co-Admin ${community.coAdminName}` : ''}
               </AppText>
               {community.isMember ? (
-                <Pressable onPress={() => setLeaveOpen(true)} style={styles.aboutLeave}>
+                <Pressable onPress={() => setConfirm('leave')} style={styles.aboutLeave}>
                   <AppText color="danger" variant="caption" weight="semibold">
                     Leave this club
                   </AppText>
@@ -387,22 +391,32 @@ export function ClubHomeScreen({ navigation, route }: Props) {
       />
       <ConfirmModal
         Icon={LogOut}
-        confirmLabel="Leave club"
+        confirmLabel={confirm === 'cancel' ? 'Cancel request' : 'Leave club'}
         isLoading={leaveMutation.isPending}
-        message="You will need approval again to come back."
-        onCancel={() => setLeaveOpen(false)}
+        message={
+          confirm === 'cancel'
+            ? 'Your request will be withdrawn. You can ask to join again later.'
+            : 'You will need approval again to come back.'
+        }
+        onCancel={() => setConfirm(null)}
         onConfirm={() => {
+          const withdrawing = confirm === 'cancel';
           leaveMutation.mutate(undefined, {
             onSuccess: () => {
-              setLeaveOpen(false);
-              showToast.success('Left club');
+              setConfirm(null);
+              showToast.success(withdrawing ? 'Request cancelled' : 'Left club');
             },
-            onError: (error) => showErrorToast(error, 'Could not leave.', 'Community'),
+            onError: (error) =>
+              showErrorToast(
+                error,
+                withdrawing ? 'Could not cancel this request.' : 'Could not leave.',
+                'Community',
+              ),
           });
         }}
-        title="Leave this club?"
-        tone="danger"
-        visible={leaveOpen}
+        title={confirm === 'cancel' ? 'Cancel this request?' : 'Leave this club?'}
+        tone={confirm === 'cancel' ? 'default' : 'danger'}
+        visible={confirm != null}
       />
       <ClubFeedOverlays />
     </Screen>

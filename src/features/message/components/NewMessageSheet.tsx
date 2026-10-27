@@ -4,7 +4,6 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Modal,
@@ -26,7 +25,7 @@ import { resolveFontFamily } from '@/shared/constants/fonts';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { resolveUploadUrl } from '@/shared/lib/resolve-upload-url';
 import { useTheme } from '@/shared/theme';
-import { AppText } from '@/shared/ui';
+import { AppText, Spinner } from '@/shared/ui';
 
 type PeopleTab = 'all' | 'friends' | 'following' | 'followers';
 
@@ -241,7 +240,7 @@ export function NewMessageSheet({
 
         {peopleQuery.isPending ? (
           <View style={styles.center}>
-            <ActivityIndicator color={theme.colors.primary} />
+            <Spinner label="Finding people" size="small" />
           </View>
         ) : peopleQuery.isError ? (
           <View style={styles.center}>

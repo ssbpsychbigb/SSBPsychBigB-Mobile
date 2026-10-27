@@ -4,6 +4,8 @@
 
 import { useState } from 'react';
 
+import { isEmailVerificationSnoozed, snoozeEmailVerification } from '@/features/auth/lib/email-snooze';
+
 import { EmailVerificationBanner } from '@/features/auth/components/EmailVerificationBanner';
 import { EmailVerificationSheet } from '@/features/auth/components/EmailVerificationSheet';
 import { useEmailVerification } from '@/features/auth/hooks/useEmailVerification';
@@ -18,8 +20,12 @@ export function EmailVerificationHost() {
   const user = useAuthStore((state) => state.user);
   const verification = useEmailVerification();
   const [open, setOpen] = useState(false);
+  const [snoozed, setSnoozed] = useState(() =>
+    user?.id ? isEmailVerificationSnoozed(user.id) : false,
+  );
 
-  if (!accessToken || !needsEmailVerification(user) || !user) {
+  const hidden = Boolean(user?.id && isEmailVerificationSnoozed(user.id)) || snoozed;
+  if (!accessToken || !needsEmailVerification(user) || !user || hidden) {
     return null;
   }
 
@@ -27,6 +33,11 @@ export function EmailVerificationHost() {
     <>
       <EmailVerificationBanner
         email={user.email}
+        onLater={() => {
+          snoozeEmailVerification(user.id);
+          setSnoozed(true);
+          setOpen(false);
+        }}
         onVerify={() => {
           setOpen(true);
           void verification.sendVerification();
@@ -35,6 +46,8 @@ export function EmailVerificationHost() {
       <EmailVerificationSheet
         email={user.email}
         onClose={() => {
+          snoozeEmailVerification(user.id);
+          setSnoozed(true);
           setOpen(false);
           verification.resetSession();
         }}

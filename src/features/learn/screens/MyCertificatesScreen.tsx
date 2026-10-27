@@ -2,7 +2,7 @@
  * Issued certificates for this account.
  */
 
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Award } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -14,7 +14,7 @@ import { useMyCertificatesQuery } from '@/features/learn/hooks/useCourseCertQuer
 import { formatRelativeTime } from '@/features/learn/lib/format-course';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+import { AppText, SocialStackChrome, Spinner, usePullToRefresh } from '@/shared/ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MyCertificates'>;
 
@@ -27,15 +27,11 @@ export function MyCertificatesScreen({ navigation }: Props) {
   const mine = useMyCertificatesQuery(Boolean(token));
   const items = mine.data?.items ?? [];
 
+  const refreshControl = usePullToRefresh(() => mine.refetch());
+
   return (
     <SocialStackChrome
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => void mine.refetch()}
-          refreshing={Boolean(mine.isRefetching)}
-          tintColor={theme.colors.primary}
-        />
-      }
+      refreshControl={refreshControl}
       subtitle="Share the verify link with anyone."
       title="Certificates">
       {!token ? (

@@ -10,7 +10,7 @@ import type { FeedTabKey } from '@/features/feed/data/feed-preview';
 export const feedKeys = {
   all: ['feed'] as const,
   timeline: (tab: FeedTabKey, session: string) =>
-    [...feedKeys.all, 'timeline', tab, session] as const,
+    [...feedKeys.all, 'timeline', 'by-time', tab, session] as const,
 };
 
 export const dayBriefKeys = {
@@ -35,7 +35,7 @@ export function useFeedTimelineQuery(
     queryFn: ({ pageParam }) => feedApi.getTimeline(tab, token, pageParam),
     getNextPageParam: (lastPage) =>
       lastPage?.hasMore ? lastPage.nextCursor : undefined,
-    staleTime: 20_000,
+    staleTime: 0,
   });
 }
 

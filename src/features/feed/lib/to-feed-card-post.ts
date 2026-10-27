@@ -82,11 +82,28 @@ function mapRole(role: string): FeedPreviewPost['author']['role'] {
  */
 export function toFeedCardPost(post: FeedPost): FeedPreviewPost {
   const name = post.author?.fullName?.trim() || 'Member';
-  const image =
-    post.media.find((item) => item.mediaType === 'image') ||
-    post.media.find((item) => item.thumbnail);
-  const imageUri =
-    resolveUploadUrl(image?.thumbnail || image?.url) || undefined;
+  const images = post.media.filter((item) => item.mediaType === 'image');
+  const imageUris = images
+    .map((item) => resolveUploadUrl(item.url) || resolveUploadUrl(item.thumbnail))
+    .filter((uri): uri is string => Boolean(uri));
+  const imageUri = imageUris[0];
+  const video = post.media.find((item) => item.mediaType === 'video');
+  const videoUri = resolveUploadUrl(video?.url) || undefined;
+  const topicLabel: Record<string, string> = {
+    gto: 'GTO',
+    entry_guidance: 'Interview',
+    current_affairs: 'Current affairs',
+    defence_news: 'Defence news',
+    recommendation_story: 'Recommendation',
+  };
+  const tags = [
+    ...(post.categories || []).map((key) => {
+      return (
+        topicLabel[key] || key.replace(/_/g, ' ').replace(/^\w/, (letter) => letter.toUpperCase())
+      );
+    }),
+    ...(post.hashtags || []).map((tag) => `#${tag.replace(/^#/, '')}`),
+  ];
 
   return {
     id: post.id,
@@ -97,12 +114,18 @@ export function toFeedCardPost(post: FeedPost): FeedPreviewPost {
       role: mapRole(post.author?.role || ''),
       initials: getUserInitials(name),
       avatarColor: avatarColor(post.author?.id || post.id),
+      avatarUri: resolveUploadUrl(post.author?.profilePhotoPath) || undefined,
       verified: (post.author?.verificationLevel ?? 0) >= 2,
     },
-    createdLabel: formatPostTime(post.createdAt),
+    createdLabel: post.editedAt
+      ? `${formatPostTime(post.createdAt)} · Edited`
+      : formatPostTime(post.createdAt),
     visibility: post.visibility === 'followers' ? 'followers' : 'public',
     body: post.content || '',
+    tags,
     imageUri,
+    imageUris,
+    videoUri,
     likesLabel: formatCount(post.stats.likes),
     commentsLabel: formatCount(post.stats.comments),
     sharesLabel: formatCount(post.stats.shares),

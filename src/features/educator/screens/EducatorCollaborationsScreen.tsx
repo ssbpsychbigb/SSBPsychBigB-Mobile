@@ -32,7 +32,7 @@ import { resolveFontFamily } from '@/shared/constants/fonts';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { resolveUploadUrl } from '@/shared/lib/resolve-upload-url';
 import { useTheme } from '@/shared/theme';
-import { AppText, Button, ConfirmModal, Screen } from '@/shared/ui';
+import { AppText, Button, ConfirmModal, Screen, Spinner } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 const ENTERABLE = new Set([
@@ -551,7 +551,7 @@ export function EducatorCollaborationsScreen() {
         </View>
 
         {institutesQuery.isLoading ? (
-          <ActivityIndicator color={theme.colors.primary} />
+          <Spinner size="small" />
         ) : null}
 
         {!institutesQuery.isLoading && institutes.length === 0 ? (

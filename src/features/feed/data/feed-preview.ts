@@ -17,6 +17,7 @@ export type FeedPreviewAuthor = {
   role: FeedAuthorRole;
   initials: string;
   avatarColor: string;
+  avatarUri?: string;
   verified?: boolean;
 };
 
@@ -39,7 +40,11 @@ export type FeedPreviewPost = {
   createdLabel: string;
   visibility: 'public' | 'followers';
   body: string;
+  /** Topic names and #hashtags, in display order. */
+  tags?: string[];
   imageUri?: string;
+  imageUris?: string[];
+  videoUri?: string;
   likesLabel: string;
   commentsLabel: string;
   sharesLabel: string;

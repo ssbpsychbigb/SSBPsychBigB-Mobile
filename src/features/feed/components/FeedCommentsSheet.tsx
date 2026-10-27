@@ -5,9 +5,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
+  Image,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -15,19 +13,22 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import { Heart } from 'lucide-react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { ArrowUp, Heart, MessageCircle, MessageSquareX, Pin, X } from 'lucide-react-native';
 
 import { JoinToContinueSheet } from '@/features/auth/components/JoinToContinueSheet';
 import { feedApi } from '@/features/feed/api/feed.api';
+import { SelfAvatar } from '@/features/feed/components/ComposeParts';
 import { formatPostTime } from '@/features/feed/lib/to-feed-card-post';
 import type { FeedComment } from '@/features/feed/types/feed.types';
 import { getUserInitials } from '@/features/home/lib/user-initials';
 import { resolveFontFamily } from '@/shared/constants/fonts';
-import { fontSize, ms, s, vs } from '@/shared/lib/responsive';
+import { resolveUploadUrl } from '@/shared/lib/resolve-upload-url';
+import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText } from '@/shared/ui';
+import { AppText, ConfirmModal, KeyboardSheet, Spinner, useDiscardGuard } from '@/shared/ui';
 import { showErrorToast } from '@/shared/ui/toast';
+
+const MAX_COMMENT_LENGTH = 2000;
 
 export type FeedCommentsSheetProps = {
   postId: string | null;
@@ -53,6 +54,13 @@ function buildTree(items: FeedComment[]): CommentNode[] {
       roots.push(node);
     }
   });
+  roots.sort((a, b) => {
+    const pinned = Number(Boolean(b.pinnedAt)) - Number(Boolean(a.pinnedAt));
+    if (pinned !== 0) {
+      return pinned;
+    }
+    return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+  });
   return roots;
 }
 
@@ -68,7 +76,6 @@ export function FeedCommentsSheet({
   onAuthorPress,
 }: FeedCommentsSheetProps) {
   const theme = useTheme();
-  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<FeedComment[]>([]);
   const [draft, setDraft] = useState('');
   const [replyTo, setReplyTo] = useState<FeedComment | null>(null);
@@ -76,8 +83,11 @@ export function FeedCommentsSheet({
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
   const [joinOpen, setJoinOpen] = useState(false);
+  const [canPin, setCanPin] = useState(false);
+  const [pinningId, setPinningId] = useState<string | null>(null);
 
   const tree = useMemo(() => buildTree(items), [items]);
+  const guard = useDiscardGuard(draft.trim().length > 0 && !sending, onClose, visible);
 
   useEffect(() => {
     if (!visible) {
@@ -96,6 +106,7 @@ export function FeedCommentsSheet({
       .then((data) => {
         if (!cancelled) {
           setItems(data.items || []);
+          setCanPin(Boolean(data.canPin));
         }
       })
       .catch((error) => {
@@ -178,6 +189,31 @@ export function FeedCommentsSheet({
     }
   };
 
+  const pinComment = async (comment: FeedComment) => {
+    if (!postId || !requireAuth() || pinningId) {
+      return;
+    }
+    setPinningId(comment.id);
+    try {
+      const result = await feedApi.pinComment(postId, comment.id, token as string);
+      setItems((current) =>
+        current.map((item) => {
+          if (item.id === result.commentId) {
+            return { ...item, pinnedAt: result.pinned ? result.pinnedAt : null };
+          }
+          if (result.pinned && item.pinnedAt) {
+            return { ...item, pinnedAt: null };
+          }
+          return item;
+        }),
+      );
+    } catch (error) {
+      showErrorToast(error, 'Could not pin this comment.', 'Comments');
+    } finally {
+      setPinningId(null);
+    }
+  };
+
   const insertEmoji = (emoji: string) => {
     if (!requireAuth()) {
       return;
@@ -199,12 +235,31 @@ export function FeedCommentsSheet({
             onPress={() =>
               onAuthorPress?.(node.author?.username || '', node.author?.fullName)
             }
-            style={[styles.avatar, { backgroundColor: theme.colors.primary }]}>
-            <AppText color="inverse" variant="caption" weight="semibold">
-              {getUserInitials(node.author?.fullName)}
-            </AppText>
+            style={[
+              styles.avatar,
+              isReply ? styles.avatarSmall : null,
+              { backgroundColor: theme.colors.primary },
+            ]}>
+            {resolveUploadUrl(node.author?.profilePhotoPath) ? (
+              <Image
+                source={{ uri: resolveUploadUrl(node.author?.profilePhotoPath) as string }}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : (
+              <AppText color="inverse" variant="caption" weight="semibold">
+                {getUserInitials(node.author?.fullName)}
+              </AppText>
+            )}
           </Pressable>
           <View style={styles.copy}>
+            {!isReply && node.pinnedAt ? (
+              <View style={styles.pinned}>
+                <Pin color={theme.colors.primary} size={ms(11)} strokeWidth={2.4} />
+                <AppText color="brand" variant="caption" weight="semibold">
+                  Pinned
+                </AppText>
+              </View>
+            ) : null}
             <View style={styles.nameRow}>
               <AppText numberOfLines={1} style={styles.flex} variant="caption" weight="semibold">
                 {node.author?.fullName || 'Member'}
@@ -226,6 +281,15 @@ export function FeedCommentsSheet({
                   Reply
                 </AppText>
               </Pressable>
+              {!isReply && canPin ? (
+                <Pressable
+                  disabled={pinningId === node.id}
+                  onPress={() => void pinComment(node)}>
+                  <AppText color="brand" variant="caption" weight="semibold">
+                    {node.pinnedAt ? 'Unpin' : 'Pin'}
+                  </AppText>
+                </Pressable>
+              ) : null}
               {(node.likesCount || 0) > 0 ? (
                 <AppText color="muted" variant="caption">
                   {node.likesCount} like{(node.likesCount || 0) === 1 ? '' : 's'}
@@ -270,49 +334,55 @@ export function FeedCommentsSheet({
 
   return (
     <>
-      <Modal
-        animationType="slide"
-        onRequestClose={onClose}
-        statusBarTranslucent
-        transparent
+      <KeyboardSheet
+        height={0.82}
+        onRequestClose={guard.requestClose}
+        style={styles.sheet}
         visible={visible}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.overlay}>
-          <Pressable onPress={onClose} style={styles.backdrop} />
-          <View
-            style={[
-              styles.sheet,
-              {
-                backgroundColor: theme.colors.background,
-                borderColor: theme.colors.border,
-                paddingBottom: Math.max(insets.bottom, vs(10)),
-              },
-            ]}>
-            <View style={styles.handleWrap}>
-              <View style={[styles.handle, { backgroundColor: theme.colors.border }]} />
-            </View>
-            <View style={styles.head}>
-              <AppText variant="subtitle" weight="bold">
+            <View style={[styles.head, { borderBottomColor: theme.colors.border }]}>
+              <AppText style={styles.headTitle} variant="subtitle" weight="bold">
                 Comments
               </AppText>
-              <Pressable hitSlop={ms(8)} onPress={onClose}>
-                <AppText color="muted" variant="caption" weight="semibold">
-                  Close
-                </AppText>
+              {items.length > 0 ? (
+                <View style={[styles.countPill, { backgroundColor: theme.colors.surface }]}>
+                  <AppText color="secondary" variant="caption" weight="semibold">
+                    {items.length}
+                  </AppText>
+                </View>
+              ) : null}
+              <View style={styles.flex} />
+              <Pressable
+                accessibilityLabel="Close comments"
+                accessibilityRole="button"
+                hitSlop={ms(8)}
+                onPress={guard.requestClose}
+                style={({ pressed }) => [
+                  styles.closeBtn,
+                  { backgroundColor: theme.colors.surface, opacity: pressed ? 0.7 : 1 },
+                ]}>
+                <X color={theme.colors.text} size={ms(18)} strokeWidth={2.2} />
               </Pressable>
             </View>
 
             {loading ? (
-              <ActivityIndicator color={theme.colors.primary} style={styles.spin} />
+              <Spinner fullScreen label="Loading comments" />
             ) : (
               <ScrollView
+                contentContainerStyle={tree.length === 0 ? styles.listEmpty : styles.listContent}
                 keyboardShouldPersistTaps="handled"
                 style={styles.list}>
                 {tree.length === 0 ? (
-                  <AppText color="muted" style={styles.empty} variant="caption">
-                    Be the first to add a useful take.
-                  </AppText>
+                  <View style={styles.emptyWrap}>
+                    <View style={[styles.emptyIcon, { backgroundColor: theme.colors.surface }]}>
+                      <MessageCircle color={theme.colors.primary} size={ms(24)} strokeWidth={1.9} />
+                    </View>
+                    <AppText variant="label" weight="semibold">
+                      No comments yet
+                    </AppText>
+                    <AppText color="muted" style={styles.empty} variant="caption">
+                      Be the first to add a useful take.
+                    </AppText>
+                  </View>
                 ) : (
                   tree.map((node) => renderComment(node))
                 )}
@@ -322,14 +392,25 @@ export function FeedCommentsSheet({
             {token ? (
               <View style={[styles.dock, { borderTopColor: theme.colors.border }]}>
                 {replyTo ? (
-                  <View style={styles.replyBar}>
-                    <AppText color="muted" style={styles.flex} variant="caption">
-                      Replying to {replyTo.author?.fullName || 'comment'}
-                    </AppText>
-                    <Pressable onPress={() => setReplyTo(null)}>
+                  <View
+                    style={[
+                      styles.replyBar,
+                      {
+                        backgroundColor:
+                          theme.mode === 'dark' ? theme.colors.primaryMuted : theme.palette.primary[50],
+                      },
+                    ]}>
+                    <AppText color="secondary" numberOfLines={1} style={styles.flex} variant="caption">
+                      Replying to{' '}
                       <AppText color="brand" variant="caption" weight="semibold">
-                        Cancel
+                        {replyTo.author?.fullName || 'comment'}
                       </AppText>
+                    </AppText>
+                    <Pressable
+                      accessibilityLabel="Cancel reply"
+                      hitSlop={ms(8)}
+                      onPress={() => setReplyTo(null)}>
+                      <X color={theme.colors.textSecondary} size={ms(15)} strokeWidth={2.2} />
                     </Pressable>
                   </View>
                 ) : null}
@@ -348,41 +429,53 @@ export function FeedCommentsSheet({
                   ))}
                 </ScrollView>
                 <View style={styles.composer}>
-                  <TextInput
-                    editable={!sending}
-                    onChangeText={setDraft}
-                    placeholder={placeholder}
-                    placeholderTextColor={theme.colors.textMuted}
+                  <SelfAvatar size={ms(34)} />
+                  <View
                     style={[
-                      styles.input,
+                      styles.inputShell,
                       {
-                        color: theme.colors.text,
                         borderColor: theme.colors.border,
                         backgroundColor:
                           theme.mode === 'dark'
                             ? theme.colors.primaryMuted
                             : theme.palette.primary[50],
-                        fontFamily: resolveFontFamily('regular'),
-                      },
-                    ]}
-                    value={draft}
-                  />
-                  <Pressable
-                    disabled={sending || !draft.trim()}
-                    onPress={() => {
-                      void send(draft, replyTo?.id || null);
-                    }}
-                    style={[
-                      styles.send,
-                      {
-                        backgroundColor: theme.colors.primary,
-                        opacity: sending || !draft.trim() ? 0.4 : 1,
                       },
                     ]}>
-                    <AppText color="inverse" variant="caption" weight="semibold">
-                      {sending ? '…' : 'Post'}
-                    </AppText>
-                  </Pressable>
+                    <TextInput
+                      editable={!sending}
+                      maxLength={MAX_COMMENT_LENGTH}
+                      multiline
+                      onChangeText={setDraft}
+                      placeholder={placeholder}
+                      placeholderTextColor={theme.colors.textMuted}
+                      scrollEnabled
+                      style={[
+                        styles.input,
+                        { color: theme.colors.text, fontFamily: resolveFontFamily('regular') },
+                      ]}
+                      value={draft}
+                    />
+                    <Pressable
+                      accessibilityLabel="Post comment"
+                      accessibilityRole="button"
+                      disabled={sending || !draft.trim()}
+                      onPress={() => {
+                        void send(draft, replyTo?.id || null);
+                      }}
+                      style={({ pressed }) => [
+                        styles.send,
+                        {
+                          backgroundColor: draft.trim() ? theme.colors.primary : theme.colors.border,
+                          opacity: pressed ? 0.85 : 1,
+                        },
+                      ]}>
+                      {sending ? (
+                        <ActivityIndicator color="#FFFFFF" size="small" />
+                      ) : (
+                        <ArrowUp color="#FFFFFF" size={ms(18)} strokeWidth={2.6} />
+                      )}
+                    </Pressable>
+                  </View>
                 </View>
               </View>
             ) : (
@@ -398,9 +491,18 @@ export function FeedCommentsSheet({
                 </AppText>
               </Pressable>
             )}
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
+      </KeyboardSheet>
+      <ConfirmModal
+        Icon={MessageSquareX}
+        cancelLabel="Keep writing"
+        confirmLabel="Discard"
+        message="Your comment hasn’t been posted yet. Leave and lose it?"
+        onCancel={guard.keepEditing}
+        onConfirm={guard.discard}
+        title="Discard comment?"
+        tone="danger"
+        visible={guard.asking}
+      />
       <JoinToContinueSheet
         message="Comments are for members. Create an account to add your take."
         onClose={() => setJoinOpen(false)}
@@ -412,45 +514,61 @@ export function FeedCommentsSheet({
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: 'flex-end',
-    backgroundColor: 'rgba(13,30,52,0.35)',
-  },
-  backdrop: {
-    flex: 1,
-  },
   sheet: {
-    height: '82%',
-    borderTopLeftRadius: ms(22),
-    borderTopRightRadius: ms(22),
-    borderWidth: 1,
     paddingHorizontal: s(16),
-    paddingTop: vs(8),
-  },
-  handleWrap: {
-    alignItems: 'center',
-    marginBottom: vs(6),
-  },
-  handle: {
-    width: ms(36),
-    height: 4,
-    borderRadius: 2,
   },
   head: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: vs(8),
+    gap: s(8),
+    paddingBottom: vs(10),
+    marginBottom: vs(4),
+    borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  spin: {
-    marginVertical: vs(24),
+  headTitle: {
+    fontSize: fontSize(17),
+    lineHeight: lineHeight(17, 1.3),
+  },
+  countPill: {
+    minWidth: ms(24),
+    height: ms(22),
+    paddingHorizontal: s(7),
+    borderRadius: ms(11),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  closeBtn: {
+    width: ms(32),
+    height: ms(32),
+    borderRadius: ms(16),
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   list: {
     flex: 1,
   },
-  empty: {
+  listContent: {
+    paddingTop: vs(10),
+    paddingBottom: vs(8),
+  },
+  listEmpty: {
+    flexGrow: 1,
+    justifyContent: 'center',
+  },
+  emptyWrap: {
+    alignItems: 'center',
+    gap: vs(6),
     paddingVertical: vs(24),
+  },
+  emptyIcon: {
+    width: ms(56),
+    height: ms(56),
+    borderRadius: ms(28),
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: vs(4),
+  },
+  empty: {
     textAlign: 'center',
   },
   thread: {
@@ -466,16 +584,28 @@ const styles = StyleSheet.create({
     gap: s(10),
   },
   avatar: {
-    width: ms(32),
-    height: ms(32),
-    borderRadius: ms(16),
+    width: ms(34),
+    height: ms(34),
+    borderRadius: ms(17),
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  avatarSmall: {
+    width: ms(28),
+    height: ms(28),
+    borderRadius: ms(14),
   },
   copy: {
     flex: 1,
     minWidth: 0,
     gap: vs(3),
+  },
+  pinned: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(4),
+    marginBottom: vs(2),
   },
   nameRow: {
     flexDirection: 'row',
@@ -507,6 +637,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: s(8),
+    borderRadius: ms(12),
+    paddingHorizontal: s(12),
+    paddingVertical: vs(7),
   },
   emojiRow: {
     flexDirection: 'row',
@@ -525,8 +658,19 @@ const styles = StyleSheet.create({
   },
   composer: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-end',
     gap: s(8),
+  },
+  inputShell: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    borderWidth: 1,
+    borderRadius: ms(22),
+    paddingLeft: s(14),
+    paddingRight: ms(4),
+    paddingVertical: ms(4),
+    gap: s(6),
   },
   joinRow: {
     flexDirection: 'row',
@@ -540,17 +684,19 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    minHeight: ms(42),
-    borderWidth: 1,
-    borderRadius: ms(21),
-    paddingHorizontal: s(14),
-    paddingVertical: vs(8),
-    fontSize: 15,
+    minHeight: ms(34),
+    maxHeight: ms(112),
+    paddingHorizontal: 0,
+    paddingTop: ms(7),
+    paddingBottom: ms(7),
+    textAlignVertical: 'center',
+    fontSize: fontSize(15),
+    lineHeight: lineHeight(15, 1.4),
   },
   send: {
-    height: ms(42),
-    paddingHorizontal: s(16),
-    borderRadius: ms(21),
+    width: ms(34),
+    height: ms(34),
+    borderRadius: ms(17),
     alignItems: 'center',
     justifyContent: 'center',
   },

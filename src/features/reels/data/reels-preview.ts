@@ -22,9 +22,12 @@ export type PrepReelPreview = {
   video?: number;
   androidRaw?: string;
   isOwn?: boolean;
+  pinned?: boolean;
   followingAuthor?: boolean;
   liked?: boolean;
   bookmarked?: boolean;
+  /** Author muted the original audio. Viewers cannot turn it back on. */
+  audioMuted?: boolean;
 };
 
 export const PREP_REELS_PREVIEW: PrepReelPreview[] = [
