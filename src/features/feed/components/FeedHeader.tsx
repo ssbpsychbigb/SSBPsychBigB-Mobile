@@ -3,28 +3,30 @@
  */
 
 import { Pressable, StyleSheet, View } from 'react-native';
-import { Bell, MessageCircle } from 'lucide-react-native';
+import { Bell, MessageCircle, Search } from 'lucide-react-native';
 
-import { ms, s } from '@/shared/lib/responsive';
+import { fontSize, ms, s } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { BrandLogo } from '@/shared/ui';
+import { AppText, BrandLogo } from '@/shared/ui';
 import { ScreenHeader } from '@/shared/ui/ScreenHeader';
 
 export type FeedHeaderProps = {
-  isAuthed: boolean;
-  hasUnreadMessages?: boolean;
+  unreadNotifications?: number;
+  unreadMessages?: number;
   onOpenNotifications: () => void;
   onOpenMessages: () => void;
+  onOpenSearch: () => void;
 };
 
 /**
- * Sticky top chrome for the public community feed.
+ * Sticky top chrome for the public community feed. Badges show only real unread counts.
  */
 export function FeedHeader({
-  isAuthed,
-  hasUnreadMessages = false,
+  unreadNotifications = 0,
+  unreadMessages = 0,
   onOpenNotifications,
   onOpenMessages,
+  onOpenSearch,
 }: FeedHeaderProps) {
   const theme = useTheme();
 
@@ -36,7 +38,25 @@ export function FeedHeader({
 
       <View style={styles.actions}>
         <Pressable
-          accessibilityLabel="Notifications"
+          accessibilityLabel="Search"
+          accessibilityRole="button"
+          onPress={onOpenSearch}
+          style={({ pressed }) => [
+            styles.iconBtn,
+            {
+              backgroundColor: theme.colors.background,
+              borderColor: theme.colors.border,
+              opacity: pressed ? 0.85 : 1,
+            },
+          ]}>
+          <Search color={theme.colors.text} size={ms(18)} strokeWidth={2} />
+        </Pressable>
+        <Pressable
+          accessibilityLabel={
+            unreadNotifications > 0
+              ? `Notifications, ${unreadNotifications} unread`
+              : 'Notifications'
+          }
           accessibilityRole="button"
           onPress={onOpenNotifications}
           style={({ pressed }) => [
@@ -48,12 +68,12 @@ export function FeedHeader({
             },
           ]}>
           <Bell color={theme.colors.text} size={ms(18)} strokeWidth={2} />
-          {isAuthed ? (
-            <View style={[styles.badge, { backgroundColor: theme.colors.danger }]} />
-          ) : null}
+          <CountBadge count={unreadNotifications} color={theme.colors.danger} />
         </Pressable>
         <Pressable
-          accessibilityLabel="Messages"
+          accessibilityLabel={
+            unreadMessages > 0 ? `Messages, ${unreadMessages} unread` : 'Messages'
+          }
           accessibilityRole="button"
           onPress={onOpenMessages}
           style={({ pressed }) => [
@@ -65,12 +85,23 @@ export function FeedHeader({
             },
           ]}>
           <MessageCircle color={theme.colors.text} size={ms(18)} strokeWidth={2} />
-          {hasUnreadMessages ? (
-            <View style={[styles.badge, { backgroundColor: theme.colors.danger }]} />
-          ) : null}
+          <CountBadge count={unreadMessages} color={theme.colors.danger} />
         </Pressable>
       </View>
     </ScreenHeader>
+  );
+}
+
+function CountBadge({ count, color }: { count: number; color: string }) {
+  if (count <= 0) {
+    return null;
+  }
+  return (
+    <View style={[styles.badge, { backgroundColor: color }]}>
+      <AppText color="inverse" style={styles.badgeText} weight="bold">
+        {count > 9 ? '9+' : String(count)}
+      </AppText>
+    </View>
   );
 }
 
@@ -99,12 +130,20 @@ const styles = StyleSheet.create({
   },
   badge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    width: ms(8),
-    height: ms(8),
-    borderRadius: ms(4),
+    top: -ms(3),
+    right: -ms(3),
+    minWidth: ms(18),
+    height: ms(18),
+    borderRadius: ms(9),
+    paddingHorizontal: ms(4),
     borderWidth: 1.5,
     borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    fontSize: fontSize(10),
+    lineHeight: fontSize(12),
+    includeFontPadding: false,
   },
 });

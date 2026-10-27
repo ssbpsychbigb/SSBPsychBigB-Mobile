@@ -9,8 +9,8 @@ import { Award } from 'lucide-react-native';
 import { Share, StyleSheet, View } from 'react-native';
 
 import { API_BASE_URL } from '@/shared/api/client';
-import { formatPostTime } from '@/features/feed/lib/to-feed-card-post';
 import { profileApi } from '@/features/profile/api/profile.api';
+import { ProfilePostGrid } from '@/features/profile/components/ProfilePostGrid';
 import {
   achievementCategoryDisplay,
   examGoalDisplay,
@@ -28,6 +28,8 @@ export type MemberProfileTabsProps = {
   username: string;
   profile: MemberProfile;
   token: string | null;
+  /** Signed-out member taps like, save, or follow. */
+  onNeedJoin?: () => void;
 };
 
 /**
@@ -42,6 +44,7 @@ export function MemberProfileTabs({
 
   return (
     <View style={styles.wrap}>
+      <ProfilePostGrid bleed={s(16)} username={username} />
       <AboutSection locked={visible?.about === false} profile={profile} />
       <DefenceSection locked={visible?.defence === false} profile={profile} />
       <JourneySection
@@ -54,7 +57,6 @@ export function MemberProfileTabs({
         token={token}
         username={username}
       />
-      <ActivitySection token={token} username={username} />
     </View>
   );
 }
@@ -339,47 +341,6 @@ function AchievementsSection({
   );
 }
 
-function ActivitySection({
-  username,
-  token,
-}: {
-  username: string;
-  token: string | null;
-}) {
-  const theme = useTheme();
-  const postsQuery = useQuery({
-    queryKey: ['member-profile-posts', username],
-    queryFn: () => profileApi.getPosts(username, token),
-  });
-  const items = postsQuery.data?.items ?? [];
-
-  return (
-    <Section title="Activity">
-      {postsQuery.isPending ? (
-        <Spinner />
-      ) : items.length === 0 ? (
-        <AppText color="muted" variant="caption">
-          This member has not posted publicly yet.
-        </AppText>
-      ) : (
-        items.map((post) => {
-          const body = post.content?.trim() || 'Photo';
-          return (
-            <View
-              key={post.id}
-              style={[styles.postCard, { borderColor: theme.colors.border }]}>
-              <AppText variant="caption">{body}</AppText>
-              <AppText color="muted" variant="caption">
-                {formatPostTime(post.createdAt)}
-              </AppText>
-            </View>
-          );
-        })
-      )}
-    </Section>
-  );
-}
-
 function Locked({ copy }: { copy: string }) {
   return (
     <AppText color="muted" variant="caption">
@@ -445,12 +406,5 @@ const styles = StyleSheet.create({
   },
   awardTitle: {
     flex: 1,
-  },
-  postCard: {
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: ms(12),
-    paddingHorizontal: s(12),
-    paddingVertical: vs(10),
-    gap: vs(4),
   },
 });

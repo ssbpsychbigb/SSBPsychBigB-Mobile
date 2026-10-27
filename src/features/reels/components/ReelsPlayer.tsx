@@ -26,6 +26,7 @@ export type ReelsPlayerProps = {
   onShare: (id: string) => void;
   onCreate: () => void;
   onAuthorPress?: (reel: PrepReelPreview) => void;
+  onMore?: (reel: PrepReelPreview) => void;
   overlayOpen?: boolean;
 };
 
@@ -46,6 +47,7 @@ export function ReelsPlayer({
   onShare,
   onCreate,
   onAuthorPress,
+  onMore,
   overlayOpen = false,
 }: ReelsPlayerProps) {
   const [page, setPage] = useState(0);
@@ -90,6 +92,7 @@ export function ReelsPlayer({
         onShare={() => onShare(item.id)}
         onCreate={onCreate}
         onAuthorPress={() => onAuthorPress?.(item)}
+        onMore={onMore ? () => onMore(item) : undefined}
         onToggleMute={() => setMuted((value) => !value)}
         onTogglePause={() => setUserPaused((value) => !value)}
         reel={item}
@@ -108,6 +111,7 @@ export function ReelsPlayer({
       onShare,
       onCreate,
       onAuthorPress,
+      onMore,
       overlayOpen,
       page,
       tabFocused,

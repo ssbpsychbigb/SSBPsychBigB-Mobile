@@ -47,22 +47,22 @@ export function OtpScreen({ navigation, route }: OtpScreenProps) {
     FEATURE_FLAGS.exposeOtpInDev && (debugOtpHint || debugOtp);
 
   const headline =
-    purpose === 'register' ? 'Verify your mobile' : 'Enter verification code';
+    purpose === 'register' ? 'Check your email' : 'Enter verification code';
 
   const subtitle = (() => {
     if (purpose !== 'register') {
       return 'We sent a 6-digit code to sign you in securely.';
     }
     if (joinType === 'institute') {
-      return 'Verify your mobile. After this, your institute stays under review until BIGB Admin approves.';
+      return 'We emailed a 6-digit code. After this, your institute stays under review until BIGB Admin approves.';
     }
     if (joinType === 'defence_officer') {
-      return 'Verify your mobile. After this, your officer application stays under review until approval.';
+      return 'We emailed a 6-digit code. After this, your officer application stays under review until approval.';
     }
     if (joinType === 'educator') {
-      return 'Verify your mobile. After this, your educator application stays under review until BIGB Admin approves.';
+      return 'We emailed a 6-digit code. After this, your educator application stays under review until BIGB Admin approves.';
     }
-    return 'We sent a 6-digit code to confirm your new BIGB account.';
+    return 'We emailed a 6-digit code to confirm your new BIGB account.';
   })();
 
   return (
@@ -100,7 +100,7 @@ export function OtpScreen({ navigation, route }: OtpScreenProps) {
             },
           ]}>
           <AppText color="muted" style={styles.sentLabel} variant="caption">
-            Code sent to
+            {purpose === 'register' ? 'Code is in your email. Account mobile' : 'Code sent to'}
           </AppText>
           <AppText style={styles.sentNumber} variant="label" weight="semibold">
             {maskMobileNumber(mobileNumber)}

@@ -7,10 +7,12 @@ import type { FeedTabKey } from '@/features/feed/data/feed-preview';
 import type {
   CreatePostInput,
   DayBriefItem,
+  DirectoryPerson,
   FeedComment,
   FeedPage,
   FeedPost,
   SharePayload,
+  UpdatePostInput,
 } from '@/features/feed/types/feed.types';
 
 function withCursor(path: string, cursor?: string | null, limit = 20): string {
@@ -31,6 +33,10 @@ const TAB_PATH: Record<FeedTabKey, string> = {
 };
 
 export const feedApi = {
+  getMeta() {
+    return apiRequest<{ categories: Array<{ value: string; label: string }> }>('/feed/meta');
+  },
+
   getTimeline(
     tab: FeedTabKey,
     token?: string | null,
@@ -68,9 +74,25 @@ export const feedApi = {
   },
 
   listComments(postId: string, token?: string | null) {
-    return apiRequest<{ items: FeedComment[] }>(`/posts/${postId}/comments`, {
-      token,
-    });
+    return apiRequest<{ items: FeedComment[]; canPin?: boolean }>(
+      `/posts/${postId}/comments`,
+      { token },
+    );
+  },
+
+  pinComment(postId: string, commentId: string, token: string) {
+    return apiRequest<{ pinned: boolean; commentId: string; pinnedAt: string | null }>(
+      `/posts/${postId}/comments/${commentId}/pin`,
+      { method: 'POST', token },
+    );
+  },
+
+  searchDirectory(kind: 'people' | 'institutes', q: string, token?: string | null) {
+    const search = new URLSearchParams({ kind, q, limit: '20' });
+    return apiRequest<{ items: DirectoryPerson[] }>(
+      `/feed/directory?${search.toString()}`,
+      { token },
+    );
   },
 
   addComment(
@@ -110,6 +132,18 @@ export const feedApi = {
     });
   },
 
+  listDrafts(token: string) {
+    return apiRequest<FeedPage>(withCursor('/posts/drafts', null, 30), { token });
+  },
+
+  updatePost(postId: string, input: UpdatePostInput, token: string) {
+    return apiRequest<FeedPost>(`/posts/${postId}`, {
+      method: 'PATCH',
+      token,
+      body: input,
+    });
+  },
+
   deletePost(postId: string, token: string) {
     return apiRequest<{ id: string; status: string }>(`/posts/${postId}`, {
       method: 'DELETE',
@@ -129,6 +163,14 @@ export const feedApi = {
       `/posts/${postId}/pin`,
       { method: 'POST', token },
     );
+  },
+
+  getPost(postId: string, token?: string | null) {
+    return apiRequest<FeedPost>(`/posts/${encodeURIComponent(postId)}`, { token });
+  },
+
+  listBookmarks(token: string, cursor?: string | null) {
+    return apiRequest<FeedPage>(withCursor('/bookmarks', cursor), { token });
   },
 
   listProfilePosts(username: string, token?: string | null) {

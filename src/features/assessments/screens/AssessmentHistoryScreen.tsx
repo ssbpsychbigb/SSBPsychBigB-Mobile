@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ChevronRight, ClipboardList } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -21,7 +21,7 @@ import { LearnEmptyState } from '@/features/learn/components/LearnEmptyState';
 import { formatRelativeTime } from '@/features/learn/lib/format-course';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme, type AppTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome } from '@/shared/ui';
+import { AppText, SocialStackChrome, usePullToRefresh } from '@/shared/ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AssessmentHistory'>;
 type HistoryItem = AssessmentHistory['items'][number];
@@ -56,15 +56,11 @@ export function AssessmentHistoryScreen({ navigation, route }: Props) {
   const summary = slug || filter !== 'all' ? summarize(items) : history.data?.summary;
   const focusedTitle = slug ? scoped[0]?.title : undefined;
 
+  const refreshControl = usePullToRefresh(() => history.refetch());
+
   return (
     <SocialStackChrome
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => void history.refetch()}
-          refreshing={Boolean(history.isRefetching && history.data)}
-          tintColor={theme.colors.primary}
-        />
-      }
+      refreshControl={refreshControl}
       subtitle={focusedTitle || 'Tap a paper to open that score again.'}
       subtitleLines={focusedTitle ? 2 : 1}
       title="Your attempts">

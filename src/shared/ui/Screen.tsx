@@ -3,16 +3,15 @@
  */
 
 import type { ReactNode } from 'react';
-import {
-  RefreshControl,
-  ScrollView,
-  View,
-  type ViewStyle,
-} from 'react-native';
+import { ScrollView, View, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useScreenTopPadding } from '@/shared/lib/safe-area';
+import { useTabBarInset } from '@/shared/lib/use-tab-bar-inset';
 import { useTheme } from '@/shared/theme';
+import { usePullToRefresh } from '@/shared/ui/usePullToRefresh';
+
+const noop = () => undefined;
 
 export type ScreenProps = {
   children: ReactNode;
@@ -47,6 +46,8 @@ export function Screen({
   const theme = useTheme();
   const insets = useSafeAreaInsets();
   const topPadding = useScreenTopPadding();
+  const tabBarInset = useTabBarInset();
+  const refreshControl = usePullToRefresh(onRefresh ?? noop, { refreshing });
 
   const containerStyle: ViewStyle = {
     flex: 1,
@@ -73,24 +74,19 @@ export function Screen({
   ];
 
   if (scroll) {
+    const contentPad =
+      typeof bodyStyle.paddingBottom === 'number' ? bodyStyle.paddingBottom : 0;
+
     return (
       <View style={frameStyle}>
         <ScrollView
-          contentContainerStyle={bodyStyle}
+          contentContainerStyle={[
+            bodyStyle,
+            { paddingBottom: contentPad + tabBarInset },
+          ]}
           keyboardShouldPersistTaps="handled"
           nestedScrollEnabled
-          refreshControl={
-            onRefresh ? (
-              <RefreshControl
-                colors={[theme.colors.primary]}
-                onRefresh={() => {
-                  void onRefresh();
-                }}
-                refreshing={refreshing}
-                tintColor={theme.colors.primary}
-              />
-            ) : undefined
-          }
+          refreshControl={onRefresh ? refreshControl : undefined}
           showsVerticalScrollIndicator={false}>
           {children}
         </ScrollView>
