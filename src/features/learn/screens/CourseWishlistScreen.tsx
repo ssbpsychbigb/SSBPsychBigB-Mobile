@@ -2,7 +2,6 @@
  * Saved courses — header destination, not a Learn tab.
  */
 
-import { RefreshControl } from 'react-native';
 import { Heart } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -14,7 +13,7 @@ import { LearnEmptyState } from '@/features/learn/components/LearnEmptyState';
 import { useWishlistQuery } from '@/features/learn/hooks/useCourseEngagementQueries';
 import { ms } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { SocialStackChrome, Spinner } from '@/shared/ui';
+import { SocialStackChrome, Spinner, usePullToRefresh } from '@/shared/ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'CourseWishlist'>;
 
@@ -27,15 +26,11 @@ export function CourseWishlistScreen({ navigation }: Props) {
   const saved = useWishlistQuery(Boolean(token));
   const items = saved.data?.items ?? [];
 
+  const refreshControl = usePullToRefresh(() => saved.refetch());
+
   return (
     <SocialStackChrome
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => void saved.refetch()}
-          refreshing={Boolean(saved.isRefetching)}
-          tintColor={theme.colors.primary}
-        />
-      }
+      refreshControl={refreshControl}
       subtitle="Saved for later. Same list on web."
       title="Wishlist">
       {!token ? (

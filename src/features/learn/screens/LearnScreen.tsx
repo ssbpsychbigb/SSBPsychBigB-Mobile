@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { useRoute, type RouteProp } from '@react-navigation/native';
 import { Award, BookOpen, Compass, Heart, Search, SlidersHorizontal } from 'lucide-react-native';
 
@@ -33,7 +33,7 @@ import type { CourseListFilters, LearnHubMode } from '@/features/learn/types/cou
 import { resolveFontFamily } from '@/shared/constants/fonts';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+import { AppText, SocialStackChrome, Spinner, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast } from '@/shared/ui/toast';
 
 /**
@@ -110,6 +110,16 @@ export function LearnScreen() {
     goRoot('LessonPlayer', { slug, lessonId });
   };
 
+  const refreshControl = usePullToRefresh(() => {
+    if (mode === 'tests') {
+      return tests.refetch();
+    }
+    return Promise.all([
+      catalogue.refetch(),
+      ...(accessToken ? [mine.refetch(), saved.refetch()] : []),
+    ]);
+  });
+
   return (
     <>
       <SocialStackChrome
@@ -122,28 +132,7 @@ export function LearnScreen() {
             void catalogue.fetchNextPage();
           }
         }}
-        refreshControl={
-          <RefreshControl
-            onRefresh={() => {
-              if (mode === 'tests') {
-                void tests.refetch();
-                return;
-              }
-              void catalogue.refetch();
-              if (accessToken) {
-                void mine.refetch();
-                void saved.refetch();
-              }
-            }}
-            refreshing={
-              mode === 'tests'
-                ? Boolean(tests.isRefetching)
-                : (catalogue.isRefetching && !catalogue.isFetchingNextPage) ||
-                  Boolean(mine.isRefetching)
-            }
-            tintColor={theme.colors.primary}
-          />
-        }
+        refreshControl={refreshControl}
         rightSlot={
           <View style={styles.headerActions}>
             <Pressable

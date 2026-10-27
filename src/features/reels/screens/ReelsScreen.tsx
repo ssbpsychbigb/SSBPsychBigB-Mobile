@@ -5,7 +5,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
   Pressable,
-  RefreshControl,
   ScrollView,
   Share,
   StyleSheet,
@@ -19,18 +18,28 @@ import { Camera, Search, X } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
 
 import { useAppTabsActions, useAppTabsState } from '@/app/navigation/AppTabsContext';
+import { useTabBarInset } from '@/shared/lib/use-tab-bar-inset';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 import { JoinToContinueSheet } from '@/features/auth/components/JoinToContinueSheet';
 import { toMultipartFilePart } from '@/features/auth/lib/upload-asset';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import type { PickedAsset } from '@/features/auth/types/register-form';
 import { feedApi } from '@/features/feed/api/feed.api';
+import { profilePostKeys } from '@/features/profile/api/profile.api';
+import { EditPostSheet, type EditPostTarget } from '@/features/feed/components/EditPostSheet';
 import { FeedCommentsSheet } from '@/features/feed/components/FeedCommentsSheet';
+import {
+  FeedPostMenu,
+  FeedReportSheet,
+  type FeedPostMenuTarget,
+} from '@/features/feed/components/FeedPostMenu';
+import { useFeedTopics } from '@/features/feed/hooks/useFeedTopics';
 import { feedKeys } from '@/features/feed/hooks/useFeedQueries';
 import type { FeedPage, FeedPost } from '@/features/feed/types/feed.types';
 import { ReelComposeSheet } from '@/features/reels/components/ReelComposeSheet';
 import { ReelExploreTile } from '@/features/reels/components/ReelExploreTile';
 import { ReelsPlayer } from '@/features/reels/components/ReelsPlayer';
+import { bookmarkKeys } from '@/features/feed/hooks/usePostQueries';
 import { reelKeys, useReelsQuery } from '@/features/reels/hooks/useReelsQueries';
 import { playlistFromSelection } from '@/features/reels/lib/playlist-from-selection';
 import { toPrepReel } from '@/features/reels/lib/to-prep-reel';
@@ -38,7 +47,7 @@ import { requireMemberProfileParams } from '@/features/profile';
 import { resolveFontFamily } from '@/shared/constants/fonts';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Screen, ScreenHeader, Spinner } from '@/shared/ui';
+import { AppText, ConfirmModal, Screen, ScreenHeader, Spinner, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 type GateKind = 'like' | 'comment' | 'share' | 'save' | 'follow' | 'compose';
@@ -72,9 +81,6 @@ const GATE_COPY: Record<GateKind, { title: string; message: string }> = {
 
 const GRID_GAP = 1.5;
 const GRID_COLUMNS = 3;
-const FILTERS = ['All', 'Psychology', 'GTO', 'Interview', 'OIR'] as const;
-
-type FilterKey = (typeof FILTERS)[number];
 
 function patchPostInPages(
   pages: FeedPage[] | undefined,
@@ -133,7 +139,14 @@ export function ReelsScreen() {
   const session = accessToken || 'guest';
 
   const [query, setQuery] = useState('');
-  const [filter, setFilter] = useState<FilterKey>('All');
+  const topics = useFeedTopics();
+  const filters = ['All', ...topics.map((topic) => topic.label)];
+  const [filter, setFilter] = useState('All');
+  const [editTarget, setEditTarget] = useState<EditPostTarget | null>(null);
+  const [reelMenu, setReelMenu] = useState<FeedPostMenuTarget | null>(null);
+  const [reelReportId, setReelReportId] = useState<string | null>(null);
+  const [reelCaption, setReelCaption] = useState('');
+  const [deleteReelId, setDeleteReelId] = useState<string | null>(null);
   const [queueIds, setQueueIds] = useState<string[]>([]);
   const [playerOpen, setPlayerOpen] = useState(false);
   const [gate, setGate] = useState<GateKind | null>(null);
@@ -279,6 +292,9 @@ export function ReelsScreen() {
       showErrorToast(error, 'Could not save this reel.', 'Reels');
       void queryClient.invalidateQueries({ queryKey: reelKeys.all });
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: bookmarkKeys.all });
+    },
   });
 
   const followMutation = useMutation({
@@ -297,7 +313,8 @@ export function ReelsScreen() {
     mutationFn: async (input: {
       caption: string;
       video: PickedAsset;
-      category: string;
+      category: string | null;
+      muteOriginal: boolean;
     }) => {
       if (!accessToken) {
         throw new Error('Not signed in');
@@ -313,8 +330,11 @@ export function ReelsScreen() {
           content: input.caption,
           type: 'video',
           visibility: 'public',
-          categories: [input.category],
-          media: uploaded.media,
+          categories: input.category ? [input.category] : [],
+          media: uploaded.media.map((item) => ({
+            ...item,
+            audioMuted: input.muteOriginal,
+          })),
         },
         accessToken,
       );
@@ -355,8 +375,10 @@ export function ReelsScreen() {
     })();
   };
 
+  const tabBarInset = useTabBarInset();
   const canvas =
     theme.mode === 'dark' ? theme.colors.background : theme.palette.primary[50];
+  const refreshControl = usePullToRefresh(() => reelsQuery.refetch());
 
   if (playerOpen) {
     return (
@@ -365,6 +387,14 @@ export function ReelsScreen() {
           onClose={() => setPlayerOpen(false)}
           onComment={(id) => setCommentPostId(id)}
           onCreate={openCompose}
+          onMore={(reel) => {
+            setReelCaption(reel.synopsis);
+            setReelMenu({
+              id: reel.id,
+              isOwn: Boolean(reel.isOwn),
+              pinned: Boolean(reel.pinned),
+            });
+          }}
           onAuthorPress={(reel) => {
             const params = requireMemberProfileParams(reel.authorUsername, reel.author);
             if (params) {
@@ -381,6 +411,85 @@ export function ReelsScreen() {
           playlist={playlist}
           overlayOpen={Boolean(commentPostId)}
           tabFocused={tabFocused}
+        />
+        <FeedPostMenu
+          onClose={() => setReelMenu(null)}
+          onSelect={(key) => {
+            const id = reelMenu?.id;
+            setReelMenu(null);
+            if (!id) {
+              return;
+            }
+            if (key === 'edit') {
+              setEditTarget({ id, content: reelCaption });
+              return;
+            }
+            if (key === 'pin') {
+              if (!accessToken) {
+                return;
+              }
+              void feedApi
+                .togglePin(id, accessToken)
+                .then((result) => {
+                  void queryClient.invalidateQueries({ queryKey: reelKeys.all });
+                  void queryClient.invalidateQueries({ queryKey: profilePostKeys.all });
+                  showToast.success(result.pinned ? 'Pinned to profile' : 'Unpinned');
+                })
+                .catch((error) => showErrorToast(error, 'Could not update pin.', 'Reels'));
+              return;
+            }
+            if (key === 'delete') {
+              setDeleteReelId(id);
+              return;
+            }
+            if (key === 'report') {
+              setReelReportId(id);
+            }
+          }}
+          target={reelMenu}
+        />
+        <EditPostSheet
+          onClose={() => setEditTarget(null)}
+          target={editTarget}
+          token={accessToken}
+        />
+        <FeedReportSheet
+          onClose={() => setReelReportId(null)}
+          onSubmit={(reason) => {
+            if (!reelReportId || !accessToken) {
+              return;
+            }
+            void feedApi
+              .reportPost(reelReportId, { reason }, accessToken)
+              .then(() => {
+                setReelReportId(null);
+                showToast.success('Reported', 'Thanks — moderators will review this reel.');
+              })
+              .catch((error) => showErrorToast(error, 'Could not send this report.', 'Reels'));
+          }}
+          visible={Boolean(reelReportId)}
+        />
+        <ConfirmModal
+          confirmLabel="Delete"
+          message="This removes the reel from Reels and Home."
+          onCancel={() => setDeleteReelId(null)}
+          onConfirm={() => {
+            if (!deleteReelId || !accessToken) {
+              return;
+            }
+            void feedApi
+              .deletePost(deleteReelId, accessToken)
+              .then(() => {
+                setDeleteReelId(null);
+                setPlayerOpen(false);
+                void queryClient.invalidateQueries({ queryKey: reelKeys.all });
+                showToast.success('Reel deleted');
+              })
+              .catch((error) => showErrorToast(error, 'Could not delete this reel.', 'Reels'));
+          }}
+          title="Delete this reel?"
+          tone="danger"
+          visible={Boolean(deleteReelId)}
         />
         <FeedCommentsSheet
           onAdded={() => void queryClient.invalidateQueries({ queryKey: reelKeys.all })}
@@ -466,7 +575,7 @@ export function ReelsScreen() {
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.filterRow}>
-          {FILTERS.map((item) => {
+          {filters.map((item) => {
             const active = filter === item;
             return (
               <Pressable
@@ -530,14 +639,8 @@ export function ReelsScreen() {
 
         {!reelsQuery.isPending && !reelsQuery.isError && visibleReels.length > 0 ? (
           <ScrollView
-            contentContainerStyle={styles.grid}
-            refreshControl={
-              <RefreshControl
-                onRefresh={() => void reelsQuery.refetch()}
-                refreshing={reelsQuery.isRefetching}
-                tintColor={theme.colors.primary}
-              />
-            }
+            contentContainerStyle={[styles.grid, { paddingBottom: vs(16) + tabBarInset }]}
+            refreshControl={refreshControl}
             showsVerticalScrollIndicator={false}
             style={styles.gridScroll}>
             {visibleReels.map((reel) => (

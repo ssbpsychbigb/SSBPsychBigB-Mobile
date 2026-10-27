@@ -3,7 +3,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
 
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
@@ -20,7 +20,12 @@ import type { DiscoverFilter } from '@/features/community/types/community.types'
 import { resolveFontFamily } from '@/shared/constants/fonts';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+import {
+  AppText,
+  SocialStackChrome,
+  Spinner,
+  usePullToRefresh,
+} from '@/shared/ui';
 
 const FILTERS: { id: DiscoverFilter; label: string }[] = [
   { id: 'public', label: 'Public' },
@@ -34,8 +39,8 @@ const FILTERS: { id: DiscoverFilter; label: string }[] = [
 export function CommunitiesScreen() {
   const theme = useTheme();
   const goRoot = useRootNavigate();
-  const accessToken = useAuthStore((state) => state.accessToken);
-  const user = useAuthStore((state) => state.user);
+  const accessToken = useAuthStore(state => state.accessToken);
+  const user = useAuthStore(state => state.user);
   const [joinOpen, setJoinOpen] = useState(false);
   const [filter, setFilter] = useState<DiscoverFilter>('public');
   const [query, setQuery] = useState('');
@@ -46,7 +51,7 @@ export function CommunitiesScreen() {
   const canCreate = canCreateCommunity(user);
 
   const clubs = useMemo(() => {
-    const items = discoverQuery.data?.pages.flatMap((page) => page.items) ?? [];
+    const items = discoverQuery.data?.pages.flatMap(page => page.items) ?? [];
     return items.map(toCommunityCard);
   }, [discoverQuery.data]);
 
@@ -68,29 +73,28 @@ export function CommunitiesScreen() {
 
   const loading = discoverQuery.isLoading && !discoverQuery.data;
   const showCreate = canCreate || !accessToken;
+  const refreshControl = usePullToRefresh(() =>
+    Promise.all([
+      discoverQuery.refetch(),
+      ...(accessToken ? [mineQuery.refetch()] : []),
+    ]),
+  );
 
   return (
     <>
       <SocialStackChrome
-        refreshControl={
-          <RefreshControl
-            onRefresh={() => {
-              void discoverQuery.refetch();
-              if (accessToken) {
-                void mineQuery.refetch();
-              }
-            }}
-            refreshing={discoverQuery.isRefetching && !discoverQuery.isFetchingNextPage}
-            tintColor={theme.colors.primary}
-          />
-        }
+        refreshControl={refreshControl}
         rightSlot={
           showCreate ? (
             <Pressable
               accessibilityLabel="Create community"
               accessibilityRole="button"
               onPress={onCreate}
-              style={[styles.createPill, { backgroundColor: theme.colors.primary }]}>
+              style={[
+                styles.createPill,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
               <Plus color="#FFFFFF" size={ms(16)} strokeWidth={2.4} />
               <AppText color="inverse" variant="caption" weight="semibold">
                 Create
@@ -101,7 +105,8 @@ export function CommunitiesScreen() {
         showBack={false}
         subtitle="Rooms for officers, educators, and serious prep"
         subtitleLines={2}
-        title="Community">
+        title="Community"
+      >
         {canCreate ? (
           <Pressable
             onPress={onCreate}
@@ -111,19 +116,28 @@ export function CommunitiesScreen() {
                 backgroundColor: theme.colors.background,
                 borderColor: theme.colors.border,
               },
-            ]}>
+            ]}
+          >
             <View style={styles.heroCopy}>
               <AppText variant="label" weight="bold">
                 Open a club from your phone
               </AppText>
               <AppText color="muted" variant="caption">
-                Name it, set public or private, then run members and rights here.
+                Name it, set public or private, then run members and rights
+                here.
               </AppText>
             </View>
-            <View style={[styles.heroCta, { backgroundColor: theme.colors.primary }]}>
+            <View
+              style={[
+                styles.heroCta,
+                { backgroundColor: theme.colors.primary },
+              ]}
+            >
               <Plus color="#FFFFFF" size={ms(16)} strokeWidth={2.4} />
             </View>
           </Pressable>
+        ) : accessToken ? (
+          <></>
         ) : null}
 
         <View
@@ -133,7 +147,8 @@ export function CommunitiesScreen() {
               backgroundColor: theme.colors.background,
               borderColor: theme.colors.border,
             },
-          ]}>
+          ]}
+        >
           <TextInput
             onChangeText={setQuery}
             onSubmitEditing={() => setSearch(query.trim())}
@@ -152,7 +167,7 @@ export function CommunitiesScreen() {
         </View>
 
         <View style={styles.filters}>
-          {FILTERS.map((item) => {
+          {FILTERS.map(item => {
             const active = filter === item.id;
             return (
               <Pressable
@@ -164,13 +179,17 @@ export function CommunitiesScreen() {
                     backgroundColor: active
                       ? theme.colors.primary
                       : theme.colors.background,
-                    borderColor: active ? theme.colors.primary : theme.colors.border,
+                    borderColor: active
+                      ? theme.colors.primary
+                      : theme.colors.border,
                   },
-                ]}>
+                ]}
+              >
                 <AppText
                   color={active ? 'inverse' : 'secondary'}
                   variant="caption"
-                  weight="semibold">
+                  weight="semibold"
+                >
                   {item.label}
                 </AppText>
               </Pressable>
@@ -183,7 +202,7 @@ export function CommunitiesScreen() {
             <AppText variant="label" weight="bold">
               Your clubs
             </AppText>
-            {mine.slice(0, 6).map((club) => (
+            {mine.slice(0, 6).map(club => (
               <CommunityClubCard
                 key={club.id}
                 club={club}
@@ -206,7 +225,8 @@ export function CommunitiesScreen() {
                   backgroundColor: theme.colors.background,
                   borderColor: theme.colors.border,
                 },
-              ]}>
+              ]}
+            >
               <AppText variant="label" weight="semibold">
                 No clubs in this filter yet
               </AppText>
@@ -216,7 +236,11 @@ export function CommunitiesScreen() {
               {showCreate ? (
                 <Pressable
                   onPress={onCreate}
-                  style={[styles.emptyCta, { backgroundColor: theme.colors.primary }]}>
+                  style={[
+                    styles.emptyCta,
+                    { backgroundColor: theme.colors.primary },
+                  ]}
+                >
                   <AppText color="inverse" variant="caption" weight="semibold">
                     Create community
                   </AppText>
@@ -224,7 +248,7 @@ export function CommunitiesScreen() {
               ) : null}
             </View>
           ) : null}
-          {clubs.map((club) => (
+          {clubs.map(club => (
             <CommunityClubCard
               key={club.id}
               club={club}
@@ -234,7 +258,8 @@ export function CommunitiesScreen() {
           {discoverQuery.hasNextPage ? (
             <Pressable
               onPress={() => void discoverQuery.fetchNextPage()}
-              style={styles.more}>
+              style={styles.more}
+            >
               <AppText color="brand" variant="caption" weight="semibold">
                 {discoverQuery.isFetchingNextPage ? 'Loading…' : 'Load more'}
               </AppText>

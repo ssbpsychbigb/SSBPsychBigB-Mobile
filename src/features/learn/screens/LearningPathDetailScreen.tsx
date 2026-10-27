@@ -2,7 +2,7 @@
  * Learning path — ordered course steps.
  */
 
-import { RefreshControl, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { Route } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -12,7 +12,7 @@ import { LearnEmptyState } from '@/features/learn/components/LearnEmptyState';
 import { useLearningPathQuery } from '@/features/learn/hooks/useCoursePathQueries';
 import { ms, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+import { AppText, SocialStackChrome, Spinner, usePullToRefresh } from '@/shared/ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'LearningPathDetail'>;
 
@@ -25,15 +25,11 @@ export function LearningPathDetailScreen({ navigation, route }: Props) {
   const query = useLearningPathQuery(pathSlug);
   const path = query.data;
 
+  const refreshControl = usePullToRefresh(() => query.refetch());
+
   return (
     <SocialStackChrome
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => void query.refetch()}
-          refreshing={Boolean(query.isRefetching)}
-          tintColor={theme.colors.primary}
-        />
-      }
+      refreshControl={refreshControl}
       subtitle={
         path
           ? `${path.steps.length} courses · ${path.progress.pct}% in path`

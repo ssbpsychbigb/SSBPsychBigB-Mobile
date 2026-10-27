@@ -17,10 +17,13 @@ import {
   Heart,
   MessageCircle,
   MoreVertical,
+  Play,
   Send,
   Users,
 } from 'lucide-react-native';
 
+import { FeedMediaCarousel } from '@/features/feed/components/FeedMediaCarousel';
+import { FeedMediaViewer } from '@/features/feed/components/FeedMediaViewer';
 import type { FeedPreviewPost } from '@/features/feed/data/feed-preview';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
@@ -44,6 +47,10 @@ export type FeedPostCardProps = {
   onFollow: () => void;
   onMenu: () => void;
   onAuthorPress?: () => void;
+  /** Opens the single-post screen when the body is tapped. */
+  onOpen?: () => void;
+  /** Replaces the default image block (e.g. a video player or reel tile). */
+  mediaSlot?: ReactNode;
 };
 
 /**
@@ -60,10 +67,15 @@ export function FeedPostCard({
   onFollow,
   onMenu,
   onAuthorPress,
+  onOpen,
+  mediaSlot,
 }: FeedPostCardProps) {
   const theme = useTheme();
   const [expanded, setExpanded] = useState(false);
   const [imageFailed, setImageFailed] = useState(false);
+  const [photoOpen, setPhotoOpen] = useState<number | null>(null);
+  const [videoOpen, setVideoOpen] = useState(false);
+  const photos = post.imageUris?.length ? post.imageUris : post.imageUri ? [post.imageUri] : [];
   const longBody = post.body.length > 140;
   const shown = expanded || !longBody ? post.body : `${post.body.slice(0, 132).trim()}…`;
 
@@ -166,27 +178,85 @@ export function FeedPostCard({
         </View>
       </View>
 
-      <AppText style={styles.body} variant="body">
-        {shown}
-        {longBody ? (
-          <AppText
-            color="brand"
-            onPress={() => setExpanded((value) => !value)}
-            variant="body"
-            weight="semibold">
-            {expanded ? '  See less' : '  See more'}
+      {shown ? (
+        <Pressable accessibilityRole={onOpen ? 'link' : undefined} disabled={!onOpen} onPress={onOpen}>
+          <AppText style={styles.body} variant="body">
+            {shown}
+            {longBody ? (
+              <AppText
+                color="brand"
+                onPress={() => setExpanded((value) => !value)}
+                variant="body"
+                weight="semibold">
+                {expanded ? '  See less' : '  See more'}
+              </AppText>
+            ) : null}
           </AppText>
-        ) : null}
-      </AppText>
+        </Pressable>
+      ) : (
+        <View style={styles.bodySpacer} />
+      )}
 
-      {post.imageUri && !imageFailed ? (
-        <View style={styles.mediaWrap}>
-          <Image
-            onError={() => setImageFailed(true)}
-            source={{ uri: post.imageUri }}
-            style={styles.media}
-          />
-        </View>
+      {mediaSlot ? (
+        mediaSlot
+      ) : post.videoUri ? (
+        <Pressable
+          accessibilityLabel="Play video"
+          accessibilityRole="button"
+          onPress={() => setVideoOpen(true)}
+          style={styles.mediaWrap}>
+          <View style={[styles.media, styles.videoTile]}>
+            <View style={styles.playBadge}>
+              <Play color="#FFFFFF" fill="#FFFFFF" size={ms(22)} />
+            </View>
+          </View>
+        </Pressable>
+      ) : photos.length > 1 ? (
+        <FeedMediaCarousel onPress={(index) => setPhotoOpen(index)} uris={photos} />
+      ) : photos[0] && !imageFailed ? (
+        <Pressable accessibilityRole="button" onPress={() => setPhotoOpen(0)}>
+          <View style={styles.mediaWrap}>
+            <Image
+              onError={() => setImageFailed(true)}
+              source={{ uri: photos[0] }}
+              style={styles.media}
+            />
+          </View>
+        </Pressable>
+      ) : null}
+
+      {photoOpen !== null || videoOpen ? (
+        <FeedMediaViewer
+          initialIndex={photoOpen ?? 0}
+          onAuthorPress={
+            onAuthorPress
+              ? () => {
+                  setPhotoOpen(null);
+                  setVideoOpen(false);
+                  onAuthorPress();
+                }
+              : undefined
+          }
+          onClose={() => {
+            setPhotoOpen(null);
+            setVideoOpen(false);
+          }}
+          post={{
+            name: post.author.name,
+            initials: post.author.initials,
+            avatarColor: post.author.avatarColor,
+            avatarUri: post.author.avatarUri,
+            verified: post.author.verified,
+            timeLabel: post.createdLabel,
+            caption: post.body,
+            tags: post.tags ?? [],
+            likesLabel: post.likesLabel,
+            commentsLabel: post.commentsLabel,
+          }}
+          uris={photos}
+          videoUri={videoOpen ? post.videoUri : null}
+          visible
+        />
       ) : null}
 
       <View style={styles.stats}>
@@ -361,6 +431,9 @@ const styles = StyleSheet.create({
     paddingTop: vs(12),
     paddingBottom: vs(10),
   },
+  bodySpacer: {
+    height: vs(12),
+  },
   mediaWrap: {
     paddingHorizontal: s(10),
   },
@@ -368,6 +441,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: vs(210),
     borderRadius: ms(16),
+  },
+  videoTile: {
+    backgroundColor: '#0F172A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  playBadge: {
+    width: ms(52),
+    height: ms(52),
+    borderRadius: ms(26),
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingLeft: ms(3),
   },
   stats: {
     paddingHorizontal: s(14),

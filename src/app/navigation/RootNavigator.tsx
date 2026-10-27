@@ -27,10 +27,13 @@ import { getPostAuthDestination } from '@/features/auth/lib/auth-routing';
 import { shouldShowLaunchSplash } from '@/features/auth/lib/auth-entry';
 import { HomeScreen } from '@/features/home';
 import { BookmarkScreen } from '@/features/bookmark';
+import { PostDetailScreen } from '@/features/feed';
+import { SearchScreen } from '@/features/feed/screens/SearchScreen';
 import { MessageScreen, ChatThreadScreen } from '@/features/message';
 import { NetworkScreen } from '@/features/network';
 import { NotificationsScreen } from '@/features/notifications';
 import { MemberProfileScreen, MemberNetworkScreen } from '@/features/profile';
+import { EditProfileScreen } from '@/features/profile/screens/EditProfileScreen';
 import { ClubHomeScreen, CreateCommunityScreen } from '@/features/community';
 import {
   AssessmentAttemptScreen,
@@ -216,11 +219,14 @@ export function RootNavigator() {
               <Stack.Screen component={MessageScreen} name="Messages" />
               <Stack.Screen component={ChatThreadScreen} name="ChatThread" />
               <Stack.Screen component={MemberProfileScreen} name="MemberProfile" />
+              <Stack.Screen component={EditProfileScreen} name="EditProfile" />
               <Stack.Screen component={MemberNetworkScreen} name="MemberNetwork" />
               <Stack.Screen
                 component={NotificationsScreen}
                 name="Notifications"
               />
+              <Stack.Screen component={PostDetailScreen} name="PostDetail" />
+              <Stack.Screen component={SearchScreen} name="Search" />
               <Stack.Screen component={ClubHomeScreen} name="ClubHome" />
               <Stack.Screen component={CreateCommunityScreen} name="CreateCommunity" />
               <Stack.Screen component={CourseDetailScreen} name="CourseDetail" />

@@ -3,7 +3,6 @@
  */
 
 import {
-  ActivityIndicator,
   Linking,
   Modal,
   Platform,
@@ -19,7 +18,7 @@ import type { UseEmailVerificationResult } from '@/features/auth/hooks/useEmailV
 import { maskEmail } from '@/features/auth/lib/mask-email';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, Button } from '@/shared/ui';
+import { AppText, Button, Spinner } from '@/shared/ui';
 
 export type EmailVerificationSheetProps = {
   visible: boolean;
@@ -113,7 +112,7 @@ export function EmailVerificationSheet({
 
           {isSending ? (
             <View style={styles.loadingWrap}>
-              <ActivityIndicator color={theme.colors.primary} size="large" />
+              <Spinner style={styles.loaderTight} />
               <AppText color="secondary" style={styles.loadingText} variant="caption">
                 Sending verification email…
               </AppText>
@@ -268,6 +267,9 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontSize: fontSize(13),
     lineHeight: lineHeight(13, 1.45),
+  },
+  loaderTight: {
+    paddingVertical: 0,
   },
   loadingWrap: {
     width: '100%',

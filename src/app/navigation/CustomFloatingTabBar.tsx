@@ -1,11 +1,9 @@
 /**
- * Custom floating bottom tab bar — flat white bar + elevated center FAB.
- * Used as `renderTabBar` for react-native-tab-view.
- *
- * * FAB lift lives INSIDE the bar height (paddingTop) so Android does not clip it.
+ * Solid tab strip overlaid on the scene. The FAB lift is not painted,
+ * so it does not add a second white box above the icons.
  */
 
-import { useMemo, type ReactNode } from 'react';
+import { useContext, useEffect, useMemo, type ReactNode } from 'react';
 import {
   Animated,
   Pressable,
@@ -13,6 +11,7 @@ import {
   View,
   useWindowDimensions,
 } from 'react-native';
+import { BottomTabBarHeightCallbackContext } from '@react-navigation/bottom-tabs';
 import type { NavigationState } from 'react-native-tab-view';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -45,8 +44,6 @@ export type CustomFloatingTabBarProps = {
    * highlight moves with the page instead of after it settles.
    */
   position?: Animated.AnimatedInterpolation<number> | null;
-  /** Hide the hairline above the bar (Reels full-bleed). */
-  hideTopEdge?: boolean;
 };
 
 type SideTabKey = Exclude<AppTabRouteKey, 'myCourse'>;
@@ -58,7 +55,6 @@ export function CustomFloatingTabBar({
   navigationState,
   jumpTo,
   position = null,
-  hideTopEdge = false,
 }: CustomFloatingTabBarProps) {
   const theme = useTheme();
   const insets = useSafeAreaInsets();
@@ -67,6 +63,7 @@ export function CustomFloatingTabBar({
   const accessToken = useAuthStore((state) => state.accessToken);
   const initials = getUserInitials(user?.fullName);
 
+  const onHeightChange = useContext(BottomTabBarHeightCallbackContext);
   const bottomPad = Math.max(insets.bottom, vs(8));
   const activeKey = navigationState.routes[navigationState.index]?.key;
   const active = theme.colors.primary;
@@ -116,19 +113,30 @@ export function CustomFloatingTabBar({
     );
   };
 
+  useEffect(() => {
+    return () => onHeightChange?.(0);
+  }, [onHeightChange]);
+
   return (
-    <View style={styles.shell}>
-      {/* Transparent lift zone — scene shows through; FAB sits here. */}
-      <View style={{ height: FAB_LIFT }} pointerEvents="box-none" />
+    <View
+      onLayout={(event) => {
+        const next = Math.round(event.nativeEvent.layout.height);
+        if (next > 0) {
+          onHeightChange?.(next);
+        }
+      }}
+      pointerEvents="box-none"
+      style={styles.shell}>
+      {/* Unpainted lift — only the FAB sits here, not a white box. */}
+      <View pointerEvents="box-none" style={{ height: FAB_LIFT }} />
 
       <View
         style={[
           styles.bar,
-          hideTopEdge ? styles.barFlush : null,
           {
             backgroundColor: theme.colors.background,
             paddingBottom: bottomPad,
-            borderTopColor: hideTopEdge ? 'transparent' : theme.colors.border,
+            borderTopColor: theme.colors.border,
           },
         ]}>
         <View style={[styles.row, { height: TAB_BAR_BASE_HEIGHT }]}>
@@ -276,23 +284,14 @@ function tabFocusOpacities(
 
 const styles = StyleSheet.create({
   shell: {
-    position: 'relative',
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
     backgroundColor: 'transparent',
   },
   bar: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    // iOS
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: vs(-3) },
-    shadowOpacity: 0.08,
-    shadowRadius: ms(8),
-    // Android
-    elevation: ms(10),
-  },
-  barFlush: {
-    borderTopWidth: 0,
-    shadowOpacity: 0,
-    elevation: 0,
   },
   row: {
     flexDirection: 'row',

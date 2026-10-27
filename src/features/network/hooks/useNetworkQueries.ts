@@ -9,19 +9,19 @@ import type { NetworkGraphKind } from '@/features/network/types/network.types';
 
 export const networkKeys = {
   all: ['network'] as const,
-  suggestions: (session: string) =>
-    [...networkKeys.all, 'suggestions', session] as const,
+  suggestions: (session: string, role: string) =>
+    [...networkKeys.all, 'suggestions', session, role] as const,
   overview: (session: string) => [...networkKeys.all, 'overview', session] as const,
   graph: (username: string, kind: string, session: string) =>
     [...networkKeys.all, 'graph', username, kind, session] as const,
 };
 
-export function useNetworkSuggestionsQuery(token: string | null) {
+export function useNetworkSuggestionsQuery(token: string | null, role: string = 'all') {
   const session = token || 'guest';
   return useInfiniteQuery({
-    queryKey: networkKeys.suggestions(session),
+    queryKey: networkKeys.suggestions(session, role),
     initialPageParam: null as string | null,
-    queryFn: ({ pageParam }) => networkApi.getSuggestions(token, pageParam),
+    queryFn: ({ pageParam }) => networkApi.getSuggestions(token, pageParam, role),
     getNextPageParam: (lastPage) =>
       lastPage?.hasMore ? lastPage.nextCursor : undefined,
     staleTime: 30_000,

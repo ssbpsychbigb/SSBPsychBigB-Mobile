@@ -3,7 +3,7 @@
  * Areas, the ones under 50%, and the server’s suggested next steps.
  */
 
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { ChevronRight, Target } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -16,7 +16,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store';
 import { LearnEmptyState } from '@/features/learn/components/LearnEmptyState';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme, type AppTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome } from '@/shared/ui';
+import { AppText, SocialStackChrome, usePullToRefresh } from '@/shared/ui';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AssessmentWeakTopics'>;
 type RoadmapRow = WeakTopicsResult['roadmap'][number];
@@ -33,15 +33,11 @@ export function AssessmentWeakTopicsScreen({ navigation }: Props) {
   const suggestions = topics.data?.suggestions ?? [];
   const untouched = roadmap.length > 0 && roadmap.every((row) => row.status === 'unknown');
 
+  const refreshControl = usePullToRefresh(() => topics.refetch());
+
   return (
     <SocialStackChrome
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => void topics.refetch()}
-          refreshing={Boolean(topics.isRefetching && topics.data)}
-          tintColor={theme.colors.primary}
-        />
-      }
+      refreshControl={refreshControl}
       subtitle="From marked answers across your tests."
       subtitleLines={2}
       title="Revision">

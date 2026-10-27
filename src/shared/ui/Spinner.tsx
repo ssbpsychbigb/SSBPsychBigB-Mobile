@@ -1,39 +1,19 @@
 /**
- * Centered activity indicator for boot / async gates.
+ * App-wide loading state — renders the BIGB brand loader.
  */
 
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import type { StyleProp, ViewStyle } from 'react-native';
 
-import { ms } from '@/shared/lib/responsive';
-import { useTheme } from '@/shared/theme';
+import { BrandLoader } from '@/shared/ui/BrandLoader';
 
 export type SpinnerProps = {
   size?: 'small' | 'large';
+  /** Fills the parent and centers the loader. */
   fullScreen?: boolean;
+  label?: string;
+  style?: StyleProp<ViewStyle>;
 };
 
-/**
- * Theme-colored loading spinner.
- */
-export function Spinner({ size = 'large', fullScreen = false }: SpinnerProps) {
-  const theme = useTheme();
-
-  return (
-    <View style={fullScreen ? styles.fullScreen : styles.inline}>
-      <ActivityIndicator color={theme.colors.primary} size={size} />
-    </View>
-  );
+export function Spinner({ size = 'large', fullScreen = false, label, style }: SpinnerProps) {
+  return <BrandLoader fill={fullScreen} label={label} size={size} style={style} />;
 }
-
-const styles = StyleSheet.create({
-  fullScreen: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  inline: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: ms(16),
-  },
-});
