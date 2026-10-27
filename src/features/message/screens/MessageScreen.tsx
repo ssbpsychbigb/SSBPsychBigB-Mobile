@@ -3,7 +3,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -24,7 +24,7 @@ import { chatKeys, useChatInboxQuery, useChatUnreadQuery } from '@/features/mess
 import { toInboxThread } from '@/features/message/lib/to-inbox-thread';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+import { AppText, SocialStackChrome, Spinner, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 /**
@@ -117,22 +117,14 @@ export function MessageScreen() {
   });
 
   const sheetBg = theme.colors.background;
+  const refreshControl = usePullToRefresh(() =>
+    Promise.all([inboxQuery.refetch(), unreadQuery.refetch()]),
+  );
 
   return (
     <>
       <SocialStackChrome
-        refreshControl={
-          isAuthed ? (
-            <RefreshControl
-              onRefresh={() => {
-                void inboxQuery.refetch();
-                void unreadQuery.refetch();
-              }}
-              refreshing={inboxQuery.isRefetching}
-              tintColor={theme.colors.primary}
-            />
-          ) : undefined
-        }
+        refreshControl={isAuthed ? refreshControl : undefined}
         rightSlot={
           <Pressable
             accessibilityLabel="New message"
@@ -234,9 +226,9 @@ export function MessageScreen() {
           </View>
         ) : null}
 
-        {isAuthed && inboxQuery.isPending ? <Spinner /> : null}
+        {isAuthed && inboxQuery.isPending ? <Spinner label="Loading conversations" /> : null}
 
-        {isAuthed && inboxQuery.isError ? (
+        {isAuthed && inboxQuery.isError && !inboxQuery.data ? (
           <View style={styles.empty}>
             <AppText variant="label" weight="semibold">
               Could not load messages

@@ -4,6 +4,7 @@
 
 import type { FeedPost } from '@/features/feed/types/feed.types';
 import { formatCount, formatPostTime } from '@/features/feed/lib/to-feed-card-post';
+import { feedTopicLabel } from '@/features/feed/lib/feed-topics';
 import type { PrepReelPreview } from '@/features/reels/data/reels-preview';
 import { resolveUploadUrl } from '@/shared/lib/resolve-upload-url';
 
@@ -28,7 +29,11 @@ function pickVideo(post: FeedPost) {
  * Explore chip from categories + caption (defence-prep buckets).
  */
 export function reelCategoryFromPost(post: FeedPost): string {
-  const hay = `${(post.categories || []).join(' ')} ${post.content}`.toLowerCase();
+  const chosen = (post.categories || []).find((item) => item && item !== 'general');
+  if (chosen) {
+    return feedTopicLabel(chosen);
+  }
+  const hay = `${post.content}`.toLowerCase();
   if (/\bgto\b|\bpgt\b|\bhgt\b|command task/.test(hay)) {
     return 'GTO';
   }
@@ -87,12 +92,14 @@ export function toPrepReel(
     postedAgo: formatPostTime(post.createdAt),
     duration: formatDuration(Number(video?.duration) || 30),
     category: reelCategoryFromPost(post),
+    audioMuted: Boolean(video?.audioMuted),
     likesLabel: formatCount(post.stats?.likes ?? 0),
     commentsLabel: formatCount(post.stats?.comments ?? 0),
     color: avatarColor(authorId || post.id),
     videoUri,
     posterUri,
     isOwn: Boolean(viewerId && authorId === viewerId),
+    pinned: Boolean(post.pinnedAt),
     followingAuthor: Boolean(post.viewerState?.followingAuthor),
     liked: Boolean(post.viewerState?.liked),
     bookmarked: Boolean(post.viewerState?.bookmarked),

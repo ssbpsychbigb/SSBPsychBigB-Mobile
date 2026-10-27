@@ -3,7 +3,7 @@
  */
 
 import { useEffect, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users } from 'lucide-react-native';
@@ -22,7 +22,7 @@ import type { NetworkGraphKind } from '@/features/network/types/network.types';
 import { requireMemberProfileParams } from '@/features/profile/lib/require-member-profile';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, SocialStackChrome, Spinner } from '@/shared/ui';
+import { AppText, SocialStackChrome, Spinner, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'MemberNetwork'>;
@@ -75,19 +75,12 @@ export function MemberNetworkScreen({ navigation, route }: Props) {
   });
 
   const title = name || username;
+  const refreshControl = usePullToRefresh(() => graphQuery.refetch());
 
   return (
     <>
       <SocialStackChrome
-        refreshControl={
-          <RefreshControl
-            onRefresh={() => {
-              void graphQuery.refetch();
-            }}
-            refreshing={graphQuery.isRefetching}
-            tintColor={theme.colors.primary}
-          />
-        }
+        refreshControl={refreshControl}
         subtitle={`@${username}`}
         title={title}>
         <View style={styles.tabs}>

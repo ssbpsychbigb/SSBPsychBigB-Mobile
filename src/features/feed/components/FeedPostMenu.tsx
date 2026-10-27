@@ -1,15 +1,12 @@
 /**
- * Post overflow — pin / delete (owner) or report (others). Matches thread menu chrome.
+ * Post options — a bottom sheet. Report sits last, in red, away from Edit and Pin.
  */
 
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
-import { Flag, Pin, Trash2 } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Flag, Pencil, Pin, Trash2, type LucideIcon } from 'lucide-react-native';
 
-import {
-  ChatThreadMenu,
-  type ChatMenuItem,
-} from '@/features/message/components/ChatSafetySheet';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
@@ -31,45 +28,110 @@ export type FeedPostMenuProps = {
   target: FeedPostMenuTarget | null;
   busy?: boolean;
   onClose: () => void;
-  onSelect: (key: 'pin' | 'delete' | 'report') => void;
+  onSelect: (key: 'edit' | 'pin' | 'delete' | 'report') => void;
+};
+
+type MenuRow = {
+  key: 'edit' | 'pin' | 'delete' | 'report';
+  label: string;
+  hint: string;
+  Icon: LucideIcon;
+  danger?: boolean;
 };
 
 /**
- * Anchored ⋯ menu for a feed card.
+ * Bottom sheet for a feed card or a reel. One tap closes it.
  */
 export function FeedPostMenu({ target, busy, onClose, onSelect }: FeedPostMenuProps) {
-  const items: ChatMenuItem[] = target?.isOwn
+  const theme = useTheme();
+  const insets = useSafeAreaInsets();
+  const rows: MenuRow[] = target?.isOwn
     ? [
+        {
+          key: 'edit',
+          label: 'Edit',
+          hint: 'Change the words. Photos and video stay.',
+          Icon: Pencil,
+        },
         {
           key: 'pin',
           label: target.pinned ? 'Unpin from profile' : 'Pin to profile',
+          hint: target.pinned
+            ? 'It returns to its place by time.'
+            : 'It becomes the first tile on your profile.',
           Icon: Pin,
         },
         {
           key: 'delete',
-          label: 'Delete post',
+          label: 'Delete',
+          hint: 'This cannot be undone.',
           Icon: Trash2,
-          tone: 'danger',
-          separatorBefore: true,
+          danger: true,
         },
       ]
     : [
         {
           key: 'report',
           label: 'Report post',
+          hint: 'Moderators review this. It is separate from everyday actions.',
           Icon: Flag,
-          tone: 'danger',
+          danger: true,
         },
       ];
 
   return (
-    <ChatThreadMenu
-      busy={busy}
-      items={items}
-      onClose={onClose}
-      onSelect={(key) => onSelect(key as 'pin' | 'delete' | 'report')}
-      visible={Boolean(target)}
-    />
+    <Modal
+      animationType="slide"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      transparent
+      visible={Boolean(target)}>
+      <View style={styles.modal}>
+      <Pressable onPress={busy ? undefined : onClose} style={styles.backdrop} />
+      <View
+        style={[
+          styles.sheet,
+          {
+            backgroundColor: theme.colors.background,
+            paddingBottom: insets.bottom + vs(8),
+          },
+        ]}>
+        <View style={[styles.grabber, { backgroundColor: theme.colors.border }]} />
+        <AppText color="muted" style={styles.sheetLabel} variant="caption" weight="semibold">
+          {target?.isOwn ? 'Your post' : 'Post'}
+        </AppText>
+        {rows.map((row, index) => {
+          const color = row.danger ? theme.colors.danger : theme.colors.text;
+          const divided = row.danger && index > 0;
+          return (
+            <View key={row.key}>
+              {divided ? (
+                <View style={[styles.hairline, { backgroundColor: theme.colors.border }]} />
+              ) : null}
+              <Pressable
+                accessibilityRole="button"
+                disabled={busy}
+                onPress={() => onSelect(row.key)}
+                style={({ pressed }) => [
+                  styles.row,
+                  pressed ? { backgroundColor: theme.colors.surface } : null,
+                ]}>
+                <row.Icon color={color} size={ms(20)} strokeWidth={2} />
+                <View style={styles.rowCopy}>
+                  <AppText style={{ color }} variant="body" weight="semibold">
+                    {row.label}
+                  </AppText>
+                  <AppText color="muted" variant="caption">
+                    {row.hint}
+                  </AppText>
+                </View>
+              </Pressable>
+            </View>
+          );
+        })}
+      </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -158,6 +220,48 @@ export function FeedReportSheet({
 }
 
 const styles = StyleSheet.create({
+  modal: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFill,
+    backgroundColor: 'rgba(13,30,52,0.45)',
+  },
+  sheet: {
+    borderTopLeftRadius: ms(20),
+    borderTopRightRadius: ms(20),
+    paddingTop: vs(8),
+  },
+  grabber: {
+    alignSelf: 'center',
+    width: ms(36),
+    height: vs(4),
+    borderRadius: ms(2),
+    marginBottom: vs(8),
+  },
+  sheetLabel: {
+    paddingHorizontal: s(20),
+    paddingBottom: vs(4),
+    letterSpacing: 0.4,
+    textTransform: 'uppercase',
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: s(14),
+    paddingHorizontal: s(20),
+    paddingVertical: vs(12),
+  },
+  rowCopy: {
+    flex: 1,
+    gap: vs(2),
+  },
+  hairline: {
+    height: StyleSheet.hairlineWidth,
+    marginHorizontal: s(20),
+    marginTop: vs(4),
+  },
   dialogRoot: {
     flex: 1,
     justifyContent: 'center',

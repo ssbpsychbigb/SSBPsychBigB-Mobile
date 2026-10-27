@@ -153,6 +153,36 @@ export const authApi = {
     );
   },
 
+  requestEmailChange(token: string, email: string) {
+    return apiRequest<{ maskedEmail: string; expiresIn: number; debugOtp?: string }>(
+      '/auth/account/email/request',
+      { method: 'POST', token, body: { email } },
+    );
+  },
+
+  confirmEmailChange(token: string, email: string, otp: string) {
+    return apiRequest<{ user: AuthUser }>('/auth/account/email/confirm', {
+      method: 'POST',
+      token,
+      body: { email, otp },
+    });
+  },
+
+  requestMobileChange(token: string, mobileNumber: string) {
+    return apiRequest<{ maskedEmail: string; mobile: string; expiresIn: number; debugOtp?: string }>(
+      '/auth/account/mobile/request',
+      { method: 'POST', token, body: { mobileNumber } },
+    );
+  },
+
+  confirmMobileChange(token: string, mobileNumber: string, otp: string) {
+    return apiRequest<{ user: AuthUser }>('/auth/account/mobile/confirm', {
+      method: 'POST',
+      token,
+      body: { mobileNumber, otp },
+    });
+  },
+
   verifyEmailOtp(
     token: string,
     otp: string,

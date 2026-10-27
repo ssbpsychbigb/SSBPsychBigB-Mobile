@@ -16,6 +16,7 @@ import { useNavigation } from '@react-navigation/native';
 import { ArrowLeft } from 'lucide-react-native';
 
 import { ms, s, vs } from '@/shared/lib/responsive';
+import { useTabBarInset } from '@/shared/lib/use-tab-bar-inset';
 import { useTheme } from '@/shared/theme';
 import { AppText } from '@/shared/ui/Text';
 import { Screen } from '@/shared/ui/Screen';
@@ -50,6 +51,7 @@ export function SocialStackChrome({
 }: SocialStackChromeProps) {
   const theme = useTheme();
   const navigation = useNavigation();
+  const tabBarInset = useTabBarInset();
 
   return (
     <Screen
@@ -88,7 +90,7 @@ export function SocialStackChrome({
         <View style={styles.right}>{rightSlot}</View>
       </ScreenHeader>
       <ScrollView
-        contentContainerStyle={styles.scrollBody}
+        contentContainerStyle={[styles.scrollBody, { paddingBottom: vs(16) + tabBarInset }]}
         keyboardShouldPersistTaps="handled"
         nestedScrollEnabled
         onScroll={(event: NativeSyntheticEvent<NativeScrollEvent>) => {

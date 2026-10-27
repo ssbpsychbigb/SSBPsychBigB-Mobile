@@ -304,6 +304,10 @@ export function MemberProfileScreen({ navigation, route }: Props) {
           ) : null}
 
           <MemberProfileTabs
+            onNeedJoin={() => {
+              setJoinKind('follow');
+              setJoinOpen(true);
+            }}
             profile={profile}
             token={token}
             username={profile.username}

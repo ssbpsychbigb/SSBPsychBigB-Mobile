@@ -4,7 +4,7 @@
  */
 
 import { useMemo, useState } from 'react';
-import { Pressable, RefreshControl, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { Bookmark, ChevronRight, Trash2 } from 'lucide-react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
@@ -20,7 +20,7 @@ import { useAuthStore } from '@/features/auth/store/auth.store';
 import { LearnEmptyState } from '@/features/learn/components/LearnEmptyState';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, ConfirmModal, SocialStackChrome } from '@/shared/ui';
+import { AppText, ConfirmModal, SocialStackChrome, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AssessmentBookmarks'>;
@@ -40,15 +40,11 @@ export function AssessmentBookmarksScreen({ navigation }: Props) {
   const folders = useMemo(() => folderOptions(items, saved.data?.folders), [items, saved.data?.folders]);
   const visible = folder ? items.filter((row) => row.folder === folder) : items;
 
+  const refreshControl = usePullToRefresh(() => saved.refetch());
+
   return (
     <SocialStackChrome
-      refreshControl={
-        <RefreshControl
-          onRefresh={() => void saved.refetch()}
-          refreshing={Boolean(saved.isRefetching && saved.data)}
-          tintColor={theme.colors.primary}
-        />
-      }
+      refreshControl={refreshControl}
       subtitle="Questions you saved while reviewing a result."
       title="Saved questions">
       {!token ? (

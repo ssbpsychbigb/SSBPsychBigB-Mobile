@@ -2,20 +2,21 @@
  * Public community feed — first tab for guests and signed-in users.
  */
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Pressable,
-  RefreshControl,
   ScrollView,
   Share,
   StyleSheet,
   View,
 } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
+import { useFocusEffect } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Users, Trash2 } from 'lucide-react-native';
 
 import { useAppTabsActions } from '@/app/navigation/AppTabsContext';
+import { useTabBarInset } from '@/shared/lib/use-tab-bar-inset';
 import { useRootNavigate } from '@/app/navigation/useRootNavigate';
 
 import { JoinToContinueSheet } from '@/features/auth/components/JoinToContinueSheet';
@@ -24,11 +25,16 @@ import { toMultipartFilePart } from '@/features/auth/lib/upload-asset';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import type { PickedAsset } from '@/features/auth/types/register-form';
 import { dayBriefApi, feedApi } from '@/features/feed/api/feed.api';
+import { profilePostKeys } from '@/features/profile/api/profile.api';
 import { DayBriefComposeSheet } from '@/features/feed/components/DayBriefComposeSheet';
 import { DayBriefStrip } from '@/features/feed/components/DayBriefStrip';
 import { DayBriefViewer } from '@/features/feed/components/DayBriefViewer';
 import { FeedCommentsSheet } from '@/features/feed/components/FeedCommentsSheet';
-import { FeedComposeSheet } from '@/features/feed/components/FeedComposeSheet';
+import { EditPostSheet, type EditPostTarget } from '@/features/feed/components/EditPostSheet';
+import {
+  FeedComposeSheet,
+  type FeedComposeInput,
+} from '@/features/feed/components/FeedComposeSheet';
 import { FeedComposerCard } from '@/features/feed/components/FeedComposerCard';
 import { FeedHeader } from '@/features/feed/components/FeedHeader';
 import { FeedPostCard } from '@/features/feed/components/FeedPostCard';
@@ -45,12 +51,20 @@ import {
   useDayBriefsQuery,
   useFeedTimelineQuery,
 } from '@/features/feed/hooks/useFeedQueries';
+import { bookmarkKeys } from '@/features/feed/hooks/usePostQueries';
+import { draftKeys } from '@/features/feed/hooks/usePostDrafts';
 import { buildDayBriefStrip } from '@/features/feed/lib/build-day-brief-strip';
+import { resolveComposeMedia } from '@/features/feed/lib/upload-post-image';
 import { toFeedCardPost } from '@/features/feed/lib/to-feed-card-post';
+import { chatKeys, useChatUnreadQuery } from '@/features/message/hooks/useChatQueries';
+import {
+  notificationKeys,
+  useNotificationUnreadQuery,
+} from '@/features/notifications/hooks/useNotificationQueries';
 import type { DayBriefItem, FeedPage, FeedPost } from '@/features/feed/types/feed.types';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
-import { AppText, ConfirmModal, Screen, Spinner } from '@/shared/ui';
+import { AppText, ConfirmModal, Screen, Spinner, usePullToRefresh } from '@/shared/ui';
 import { showErrorToast, showToast } from '@/shared/ui/toast';
 
 type GateReason =
@@ -145,12 +159,29 @@ export function FeedScreen() {
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
   const [activeBrief, setActiveBrief] = useState<DayBriefItem | null>(null);
   const [menuTarget, setMenuTarget] = useState<FeedPostMenuTarget | null>(null);
+  const [editTarget, setEditTarget] = useState<EditPostTarget | null>(null);
   const [reportPostId, setReportPostId] = useState<string | null>(null);
   const [deletePostId, setDeletePostId] = useState<string | null>(null);
 
   const timelineEnabled = tab !== 'following' || isAuthed;
   const timelineQuery = useFeedTimelineQuery(tab, accessToken, timelineEnabled);
   const briefsQuery = useDayBriefsQuery(accessToken);
+  const chatUnreadQuery = useChatUnreadQuery(accessToken);
+  const alertUnreadQuery = useNotificationUnreadQuery(accessToken);
+
+  // Badges must be current when the user comes back from Messages or Alerts.
+  useFocusEffect(
+    useCallback(() => {
+      if (!accessToken) {
+        return;
+      }
+      void queryClient.invalidateQueries({ queryKey: chatKeys.unread(accessToken) });
+      void queryClient.invalidateQueries({
+        queryKey: notificationKeys.unread(accessToken),
+      });
+      void queryClient.invalidateQueries({ queryKey: feedKeys.all });
+    }, [accessToken, queryClient]),
+  );
 
   const posts = useMemo(() => {
     const items = timelineQuery.data?.pages.flatMap((page) => page.items) ?? [];
@@ -182,6 +213,7 @@ export function FeedScreen() {
 
   const invalidateFeed = () => {
     void queryClient.invalidateQueries({ queryKey: feedKeys.all });
+    void queryClient.invalidateQueries({ queryKey: profilePostKeys.all });
   };
 
   const likeMutation = useMutation({
@@ -254,6 +286,9 @@ export function FeedScreen() {
       invalidateFeed();
       showErrorToast(error, 'Could not update bookmark.', 'Feed');
     },
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: bookmarkKeys.all });
+    },
   });
 
   const reportMutation = useMutation({
@@ -305,18 +340,12 @@ export function FeedScreen() {
   });
 
   const composeMutation = useMutation({
-    mutationFn: async (input: { content: string; image?: PickedAsset }) => {
+    mutationFn: async (input: FeedComposeInput) => {
       if (!accessToken) {
         throw new Error('Not signed in');
       }
-      let media: Array<{ url: string; thumbnail?: string; mediaType?: string }> | undefined;
-      if (input.image) {
-        const formData = new FormData();
-        appendImagePart(formData, input.image);
-        const uploaded = await feedApi.uploadMedia(formData, accessToken);
-        media = uploaded.media;
-      }
-      return feedApi.createPost(
+      const media = await resolveComposeMedia(input.media ?? [], accessToken);
+      const post = await feedApi.createPost(
         {
           content: input.content,
           type: media?.length ? 'image' : 'text',
@@ -326,10 +355,17 @@ export function FeedScreen() {
         },
         accessToken,
       );
+      if (input.draftId) {
+        await feedApi.deletePost(input.draftId, accessToken).catch(() => undefined);
+      }
+      return post;
     },
-    onSuccess: () => {
+    onSuccess: (_post, input) => {
       setComposeOpen(false);
       invalidateFeed();
+      if (input.draftId) {
+        void queryClient.invalidateQueries({ queryKey: draftKeys.all });
+      }
       showToast.success('Posted', 'Your post is live on the feed.');
     },
     onError: (error) => {
@@ -338,35 +374,47 @@ export function FeedScreen() {
   });
 
   const briefMutation = useMutation({
-    mutationFn: async (input: { caption: string; image: PickedAsset }) => {
+    mutationFn: async (input: { caption: string; images: PickedAsset[] }) => {
       if (!accessToken) {
         throw new Error('Not signed in');
       }
-      const formData = new FormData();
-      appendImagePart(formData, input.image);
-      const uploaded = await dayBriefApi.uploadMedia(formData, accessToken);
-      return dayBriefApi.create(accessToken, {
-        caption: input.caption,
-        mediaUrl: uploaded.url,
-        mediaType: uploaded.mediaType,
-        thumbnailUrl: uploaded.thumbnail,
-        durationSec: uploaded.mediaType === 'video' ? 12 : 6,
-      });
+      const created = [];
+      for (const image of input.images) {
+        const formData = new FormData();
+        appendImagePart(formData, image);
+        const uploaded = await dayBriefApi.uploadMedia(formData, accessToken);
+        created.push(
+          await dayBriefApi.create(accessToken, {
+            caption: input.caption,
+            mediaUrl: uploaded.url,
+            mediaType: uploaded.mediaType,
+            thumbnailUrl: uploaded.thumbnail,
+            durationSec: uploaded.mediaType === 'video' ? 12 : 6,
+          }),
+        );
+      }
+      return created;
     },
-    onSuccess: () => {
+    onSuccess: (_created, input) => {
       setBriefComposeOpen(false);
       void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
-      showToast.success('Story shared', 'Visible on Home for 24 hours. Not a Reel.');
+      showToast.success(
+        input.images.length > 1 ? `${input.images.length} stories shared` : 'Story shared',
+        'Visible on Home for 24 hours. Not a Reel.',
+      );
     },
     onError: (error) => {
       showErrorToast(error, 'Could not share this brief.', 'Day Brief');
     },
   });
 
+  const tabBarInset = useTabBarInset();
   const canvas =
     theme.mode === 'dark' ? theme.colors.background : theme.palette.primary[50];
 
-  const refreshing = timelineQuery.isRefetching || briefsQuery.isRefetching;
+  const refreshControl = usePullToRefresh(() =>
+    Promise.all([timelineQuery.refetch(), briefsQuery.refetch()]),
+  );
 
   return (
     <>
@@ -377,26 +425,18 @@ export function FeedScreen() {
         style={{ backgroundColor: canvas }}>
         <View style={styles.pad}>
           <FeedHeader
-            hasUnreadMessages={isAuthed}
-            isAuthed={isAuthed}
             onOpenMessages={() => goRoot('Messages')}
             onOpenNotifications={() => goRoot('Notifications')}
+            onOpenSearch={() => goRoot('Search')}
+            unreadMessages={isAuthed ? chatUnreadQuery.data?.unreadCount ?? 0 : 0}
+            unreadNotifications={isAuthed ? alertUnreadQuery.data?.unreadCount ?? 0 : 0}
           />
         </View>
 
         <ScrollView
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, { paddingBottom: vs(16) + tabBarInset }]}
           nestedScrollEnabled
-          refreshControl={
-            <RefreshControl
-              onRefresh={() => {
-                void timelineQuery.refetch();
-                void briefsQuery.refetch();
-              }}
-              refreshing={refreshing}
-              tintColor={theme.colors.primary}
-            />
-          }
+          refreshControl={refreshControl}
           showsVerticalScrollIndicator={false}
           style={styles.flex}>
           <DayBriefStrip
@@ -604,6 +644,7 @@ export function FeedScreen() {
 
       <FeedComposeSheet
         busy={composeMutation.isPending}
+        enableDrafts
         onClose={() => setComposeOpen(false)}
         onSubmit={(input) => composeMutation.mutate(input)}
         visible={composeOpen}
@@ -625,11 +666,22 @@ export function FeedScreen() {
         visible={Boolean(commentPostId)}
       />
 
+      <EditPostSheet
+        onClose={() => setEditTarget(null)}
+        target={editTarget}
+        token={accessToken}
+      />
       <FeedPostMenu
         busy={pinMutation.isPending}
         onClose={() => setMenuTarget(null)}
         onSelect={(key) => {
           if (!menuTarget) {
+            return;
+          }
+          if (key === 'edit') {
+            const found = posts.find((item) => item.api.id === menuTarget.id);
+            setMenuTarget(null);
+            setEditTarget({ id: menuTarget.id, content: found?.api.content || '' });
             return;
           }
           if (key === 'pin') {

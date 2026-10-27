@@ -25,6 +25,10 @@ export type ConfirmModalProps = {
   isLoading?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  /** Optional full-width action above the two buttons (e.g. "Save draft"). */
+  secondaryLabel?: string;
+  onSecondary?: () => void;
+  secondaryLoading?: boolean;
 };
 
 /**
@@ -41,6 +45,9 @@ export function ConfirmModal({
   isLoading = false,
   onConfirm,
   onCancel,
+  secondaryLabel,
+  onSecondary,
+  secondaryLoading = false,
 }: ConfirmModalProps) {
   const theme = useTheme();
   const isDanger = tone === 'danger';
@@ -99,7 +106,31 @@ export function ConfirmModal({
               {message}
             </AppText>
 
-            <View style={styles.actions}>
+            {secondaryLabel && onSecondary ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={isLoading || secondaryLoading}
+                onPress={onSecondary}
+                style={({ pressed }) => [
+                  styles.btn,
+                  styles.secondaryBtn,
+                  {
+                    backgroundColor: theme.colors.primary,
+                    opacity: secondaryLoading ? 0.55 : pressed ? 0.9 : 1,
+                  },
+                ]}>
+                <AppText
+                  color="inverse"
+                  numberOfLines={1}
+                  style={styles.btnLabel}
+                  variant="label"
+                  weight="semibold">
+                  {secondaryLoading ? 'Saving…' : secondaryLabel}
+                </AppText>
+              </Pressable>
+            ) : null}
+
+            <View style={[styles.actions, secondaryLabel ? styles.actionsTight : null]}>
               <Pressable
                 accessibilityRole="button"
                 disabled={isLoading}
@@ -196,6 +227,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'stretch',
     gap: s(10),
+    marginTop: vs(20),
+  },
+  actionsTight: {
+    marginTop: vs(10),
+  },
+  secondaryBtn: {
+    flex: 0,
+    width: '100%',
     marginTop: vs(20),
   },
   btn: {

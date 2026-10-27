@@ -1,5 +1,5 @@
 /**
- * Deep links for Learn and assessments — same paths as the web learner app.
+ * Deep links for Learn, assessments, posts, and profiles — same paths as the web app.
  */
 
 import {
@@ -53,6 +53,10 @@ export const rootLinking: LinkingOptions<RootStackParamList> = {
       AssessmentResult: 'assessments/:slug/attempt/:attemptId/result',
       AssessmentLeaderboard: 'assessments/:slug/leaderboard',
       AssessmentCheckout: 'assessments/:slug/checkout',
+      PostDetail: 'posts/:postId',
+      MemberProfile: 'u/:username',
+      ClubHome: 'c/:slug',
+      Notifications: 'notifications',
     },
   },
 };

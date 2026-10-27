@@ -583,9 +583,9 @@ export function ChatThreadScreen({ navigation, route }: Props) {
         keyboardVerticalOffset={Platform.OS === 'ios' ? 8 : 0}
         style={styles.flex}>
         {messagesQuery.isPending ? (
-          <Spinner />
+          <Spinner fullScreen label="Loading messages" />
         ) : messagesQuery.isError && messages.length === 0 ? (
-          <View style={styles.empty}>
+          <View style={[styles.empty, styles.fillCenter]}>
             <AppText variant="label" weight="semibold">
               Could not load this chat
             </AppText>
@@ -611,12 +611,14 @@ export function ChatThreadScreen({ navigation, route }: Props) {
               </View>
             }
             ListHeaderComponent={
-              messagesQuery.hasNextPage ? (
+              messagesQuery.isFetchingNextPage ? (
+                <Spinner size="small" />
+              ) : messagesQuery.hasNextPage ? (
                 <Pressable
                   onPress={() => void messagesQuery.fetchNextPage()}
                   style={styles.earlier}>
                   <AppText color="brand" variant="caption" weight="semibold">
-                    {messagesQuery.isFetchingNextPage ? 'Loading…' : 'Load earlier messages'}
+                    Load earlier messages
                   </AppText>
                 </Pressable>
               ) : null
@@ -843,6 +845,10 @@ const styles = StyleSheet.create({
   },
   emptyCopy: {
     textAlign: 'center',
+  },
+  fillCenter: {
+    flex: 1,
+    justifyContent: 'center',
   },
   earlier: {
     alignItems: 'center',

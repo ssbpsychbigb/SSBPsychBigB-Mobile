@@ -9,6 +9,7 @@ import {
   Bookmark,
   Camera,
   ChevronLeft,
+  Ellipsis,
   Heart,
   MessageCircle,
   Music2,
@@ -54,6 +55,8 @@ export type ReelStageProps = {
   onClose?: () => void;
   onCreate?: () => void;
   onAuthorPress?: () => void;
+  /** Owner menu — edit caption or delete. */
+  onMore?: () => void;
 };
 
 /**
@@ -80,10 +83,11 @@ export function ReelStage({
   onClose,
   onCreate,
   onAuthorPress,
+  onMore,
 }: ReelStageProps) {
   const topPad = useScreenTopPadding(vs(4));
   const [captionOpen, setCaptionOpen] = useState(false);
-  const caption = `${reel.title} ${reel.synopsis}`;
+  const caption = reel.synopsis.trim();
   const longCaption = caption.length > 92;
   const shownCaption =
     captionOpen || !longCaption ? caption : `${caption.slice(0, 86).trim()}…`;
@@ -99,7 +103,7 @@ export function ReelStage({
       <Video
         disableFocus
         ignoreSilentSwitch="ignore"
-        muted={muted}
+        muted={muted || Boolean(reel.audioMuted)}
         paused={!isActive || userPaused}
         playInBackground={false}
         pointerEvents="none"
@@ -159,18 +163,30 @@ export function ReelStage({
               style={styles.ringBtn}>
               <MessageCircle color={INK} size={ms(18)} strokeWidth={2.2} />
             </Pressable>
-            <Pressable
-              accessibilityLabel={muted ? 'Unmute' : 'Mute'}
-              accessibilityRole="button"
-              hitSlop={10}
-              onPress={onToggleMute}
-              style={styles.ringBtn}>
-              {muted ? (
-                <VolumeX color={INK} size={ms(18)} strokeWidth={2.2} />
-              ) : (
-                <Volume2 color={INK} size={ms(18)} strokeWidth={2.2} />
-              )}
-            </Pressable>
+            {reel.audioMuted ? null : (
+              <Pressable
+                accessibilityLabel={muted ? 'Unmute' : 'Mute'}
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={onToggleMute}
+                style={styles.ringBtn}>
+                {muted ? (
+                  <VolumeX color={INK} size={ms(18)} strokeWidth={2.2} />
+                ) : (
+                  <Volume2 color={INK} size={ms(18)} strokeWidth={2.2} />
+                )}
+              </Pressable>
+            )}
+            {onMore ? (
+              <Pressable
+                accessibilityLabel="Reel options"
+                accessibilityRole="button"
+                hitSlop={10}
+                onPress={onMore}
+                style={styles.ringBtn}>
+                <Ellipsis color={INK} size={ms(18)} strokeWidth={2.2} />
+              </Pressable>
+            ) : null}
           </View>
         </View>
 
@@ -213,20 +229,22 @@ export function ReelStage({
               )}
             </View>
 
-            <Pressable
-              accessibilityRole="button"
-              disabled={!longCaption}
-              onPress={() => setCaptionOpen((value) => !value)}>
-              <AppText color="inverse" style={styles.caption} variant="caption">
-                {shownCaption}
-                {longCaption && !captionOpen ? (
-                  <AppText color="inverse" style={styles.more} variant="caption" weight="semibold">
-                    {' '}
-                    more
-                  </AppText>
-                ) : null}
-              </AppText>
-            </Pressable>
+            {caption ? (
+              <Pressable
+                accessibilityRole="button"
+                disabled={!longCaption}
+                onPress={() => setCaptionOpen((value) => !value)}>
+                <AppText color="inverse" style={styles.caption} variant="caption">
+                  {shownCaption}
+                  {longCaption && !captionOpen ? (
+                    <AppText color="inverse" style={styles.more} variant="caption" weight="semibold">
+                      {' '}
+                      more
+                    </AppText>
+                  ) : null}
+                </AppText>
+              </Pressable>
+            ) : null}
 
             <View style={styles.audioRow}>
               <Music2 color={INK} size={ms(13)} strokeWidth={2.2} />
