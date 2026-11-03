@@ -1,6 +1,6 @@
-# BIGB Mobile — Client Bug Report Fix Plan (Day 1 + Day 2 + Day 3)
+# BIGB Mobile — Client Bug Report Fix Plan (Day 1 + Day 2 + Day 3 + Version 2 Day 1)
 
-Source: client test reports **Day 1 (24 Oct 2026)** — BUG-001 to BUG-011, **Day 2 (25 Oct 2026)** — BUG-012 to BUG-022, and **Day 3 (26 Oct 2026)** — BUG-023 to BUG-029.
+Source: client test reports **Day 1 (24 Oct 2026)** — BUG-001 to BUG-011, **Day 2 (25 Oct 2026)** — BUG-012 to BUG-022, **Day 3 (26 Oct 2026)** — BUG-023 to BUG-029, and **Version 2 Day 1 (2 Nov 2026)** — V2-BUG-001 to V2-BUG-005 (`Version_2_Bug_Issues_Report_Day1_0805.pdf`).
 
 This file says, for every bug, **what the client asked for**, **what the app does today** (checked in code), and **what we will change**. Follow it slice by slice, and update the **Status** column and the progress log (section 0) after each slice.
 
@@ -21,6 +21,21 @@ This file says, for every bug, **what the client asked for**, **what the app doe
 | 027 | High | **Edit caption** was added the same day (Slice 5) on Home, the post screen, and Reels. Confirm the client’s build has it. The You-tab grid still has no ⋯, so a post opened only from the grid has no Edit until you are on the post screen. |
 | 028 | Medium | Pin saves on the server and shows a toast, then nothing visible changes. The profile grid is still newest-first and has no pin mark. |
 | 029 | High | Home has no search. Courses can be searched on Learn. People search exists only as mention typeahead (name, not username). Institutes have no search. |
+
+### Version 2 Day 1 — Slice 7 (3 Nov 2026) ✅
+
+Source PDF: **Version 2 — Bug & Issues Report**, Day 1 testing, **2 November 2026**, **5 issues**. All five coded in Slice 7.
+
+| Bug | Severity | What changed |
+|-----|----------|--------------|
+| V2-001 | High | Feed Follow/Unfollow: optimistic React Query update, author id normalized with `String()`, Follow CTA fills primary when following. |
+| V2-002 | Medium | Create Content + You avatars resolve `profilePhotoPath` / `officerPhotoPath` via `resolveUploadUrl` (member-profile paths first). |
+| V2-003 | High | Community hero restored: eligible roles get Create / Open a club; aspirants see the reason banner (same rule as BUG-024). |
+| V2-004 | Medium | DM image tap opens shared `FeedMediaViewer` full screen. |
+| V2-005 | Medium | Photo button = gallery only; paperclip = `ChatDocumentSheet` (device files via WebView file input). |
+
+**Files (mobile):** `feed/screens/FeedScreen.tsx`, `feed/components/FeedPostCard.tsx`, `feed/components/FeedComposerCard.tsx`, `profile/screens/ProfileScreen.tsx`, `community/screens/CommunitiesScreen.tsx`, `message/screens/ChatThreadScreen.tsx`, `message/components/ChatBubble.tsx`, `message/components/ChatComposer.tsx`, new `message/components/ChatDocumentSheet.tsx`, new `message/lib/pick-chat-file.ts`.
+**Checks:** `yarn typecheck` ✅.
 
 ### Slice 1 — Quick wins (26 Oct 2026) ✅
 
@@ -305,6 +320,11 @@ Paths: mobile = `g:\Upwork work\BigB`, backend = `g:\Upwork work\SSBPsychBigB-Ba
 | 027 | Edit after publish | High | Same ask as BUG-022. Edit caption is in Slice 5; profile grid has no menu | Yes | ✅ Fixed (Slice 5 + Slice 6). Row is **Edit**. Open the post from the grid, then ⋯ |
 | 028 | Pin post | Medium | Pin is stored, but the profile list ignores `pinnedAt` and shows no mark | Yes (`POST /posts/:id/pin`) | ✅ Fixed (Slice 6) |
 | 029 | Search people, courses, institutes | High | Home header is logo, bell, and messages only | Yes (`GET /feed/directory`, `GET /courses?q=`) | ✅ Fixed (Slice 6) |
+| V2-001 | Feed / Following | High | Follow / Unfollow missing or not interactive on Feed Following | Check mobile Follow CTA on cards + Following tab | ✅ Fixed (Slice 7) |
+| V2-002 | Create Content / You | Medium | Profile photo missing; initials only in composer and You tab | Check avatar URL resolve + upload path | ✅ Fixed (Slice 7) |
+| V2-003 | Community create | High | No visible Create Community option | Related to BUG-024 role gate / copy | ✅ Fixed (Slice 7). Same role gate as BUG-024 |
+| V2-004 | Chat image viewer | Medium | Shared DM photo cannot open full screen / original size | Needs chat media viewer | ✅ Fixed (Slice 7) |
+| V2-005 | Chat attachments | Medium | Both attachment buttons open gallery; no file picker | Wire distinct gallery vs files actions | ✅ Fixed (Slice 7) |
 
 ---
 
@@ -320,9 +340,10 @@ The client wrote "if this is intended" on several items. Proposed defaults are i
 6. **Reel mute (BUG-021):** **Yes**, store `audioMuted` on the video media item; player starts muted and hides the unmute toggle for those reels.
 7. **Edit after publish (BUG-022):** **Editable: caption/text, visibility, categories.** Media can't be changed after publish (delete + repost). Show "Edited" label (backend already sets `editedAt`).
 8. **Categories (BUG-006):** **Use one shared list** from backend `GET /feed/meta`, broadened to match onboarding interests.
-9. **Who can create a community (BUG-024):** **Keep today’s rule.** An officer, an institute, a freelancer educator, or an institute educator with `community.create` can create. An aspirant cannot. Do not open create to every member unless the client says so. What we will change is the empty hole: a signed-in member who cannot create sees a short line, not a missing button.
+9. **Who can create a community (BUG-024 / V2-003):** **Keep today’s rule** until the client says otherwise. An officer, an institute, a freelancer educator, or an institute educator with `community.create` can create. An aspirant cannot. Version 2 still says Create is missing — first confirm the tester’s role; if they are eligible and still see no button, that is a real regression. If they are an aspirant, keep the reason copy, do not silently hide Create.
 10. **Pin a post (BUG-028):** **Pin to the profile**, the way Instagram does. The pinned post is the first tile on that person’s grid, with a small pin mark. It does not jump to the top of Home.
 11. **Pin a comment (BUG-025):** **The post owner only, one pinned comment.** It stays at the top of that post’s comments, including a Reel. Unpin replaces it. Not available on someone else’s Reel.
+12. **Chat attachments (V2-005):** **Two distinct actions.** One control = photos/gallery (or camera+gallery). The other = device files / documents. Do not point both at the same gallery picker.
 
 ---
 
@@ -703,6 +724,88 @@ Backend `PATCH /posts/:postId` exists (`feed.routes.js` 122 → `feed.service.js
   - Do not add post search in this bug. The client did not ask for it.
 - **Done when:** Home → search → type `Milan` on People → that profile opens. Type a real course word on Courses → that course opens. Type an institute name on Institutes → that institute opens. A nonsense word shows a clear empty line, not a spinner that never ends.
 
+### V2-BUG-001 — Following button is not interactive · High
+
+- **Client said (2 Nov 2026):** On **Feed / Following**, the Following control is not working. There are no visible **Follow** or **Unfollow** controls, so users cannot manage who they follow.
+- **Steps the client wrote:**
+  1. Open the Feed tab.
+  2. Go to the Following section or locate the Following control.
+  3. Try to follow or unfollow an account.
+- **Expected:** Users can follow and unfollow through a clearly visible, working control.
+- **Suggested fix (client):** Add or restore Follow/Unfollow and make sure it responds.
+- **How we will test after the fix:**
+  1. Log in as **A**. Open **Feed** → **For You**. On a post by someone you do not follow, tap **Follow** → the button becomes **Following** (or Unfollow). Pull to refresh → still following.
+  2. Tap that control again → unfollow. Refresh → Follow is back.
+  3. Open **Feed** → **Following**. The tab only shows people A follows. Follow someone from Network or For You, then return: their posts appear here. Unfollow them: they leave this tab.
+  4. Guest / signed-out: Follow asks to join or log in (no silent no-op).
+- **Status:** ✅ Fixed (Slice 7). Optimistic follow + clearer Following CTA on feed cards.
+
+### V2-BUG-002 — Profile photo is not displayed · Medium
+
+- **Client said:** In **Create Content** the profile image area shows only name initials. The **You** tab also misses the uploaded profile photo.
+- **Steps the client wrote:**
+  1. Open Create Content and check the profile image area.
+  2. Open the You tab and check the profile image.
+- **Expected:** The uploaded profile photo shows in both places. Initials only when there is no photo.
+- **Suggested fix (client):** Check image retrieval and display in Create Content and You.
+- **How we will test after the fix:**
+  1. As A, open **You** → **⋯** → **Account** (or Edit profile) → set a clear profile photo → **Save**.
+  2. Open **You** again: the large avatar is that photo, not only initials.
+  3. Home → open **Create post** / Share with the community: the composer avatar is the same photo.
+  4. Open **Comments** on any post: the input-row avatar is the same photo.
+  5. Remove the photo in Edit profile → You and Create Content fall back to initials only.
+  6. A brand-new account with no photo: initials only (no broken image).
+- **Status:** ✅ Fixed (Slice 7). Composer + You prefer member-profile / officer photo paths through `resolveUploadUrl`.
+
+### V2-BUG-003 — Community creation option is missing · High
+
+- **Client said:** There is no visible option or button to create a new community.
+- **Steps the client wrote:**
+  1. Open the Community section.
+  2. Look for a Create Community button or entry point.
+- **Expected:** Eligible users have a clear option to start and create a new community.
+- **Suggested fix (client):** Add a visible Create Community button and a working creation flow.
+- **Note from Day 3 (BUG-024):** Create is limited to officer / institute / allowed educator. Aspirants were given a reason instead of a missing button. Version 2 still reports “missing” — confirm whether the tester is an eligible role and still sees no Create, or whether the product rule should change.
+- **How we will test after the fix:**
+  1. As an **officer** (or other allowed role): Community → a clear **Create** (or Open a club) entry → finish a club named e.g. `Delhi GTO Room` → land inside it.
+  2. As an **aspirant**: either Create works (if product opens it), or a clear reason remains and Create is not a silent hole.
+  3. Guest: Create / join still opens auth, not a dead button.
+  4. After create, the new club appears in the list and opens from Community.
+- **Status:** ✅ Fixed (Slice 7). Eligible roles: Create hero + header Create. Aspirants: reason banner (no silent hole). Role gate unchanged.
+
+### V2-BUG-004 — Images cannot be viewed in full view or original size · Medium
+
+- **Client said:** In **personal direct messages**, a shared photo cannot be opened full screen or viewed at original size.
+- **Steps the client wrote:**
+  1. Open a personal direct message conversation.
+  2. Select a photo shared in the conversation.
+  3. Try to open it in full view or at original size.
+- **Expected:** Users can open shared photos in a larger viewer and see the available original resolution.
+- **Suggested fix (client):** Add an image viewer for the selected photo (full view + original size where available).
+- **How we will test after the fix:**
+  1. As A, open Messages → a chat with B → send a photo.
+  2. As A and as B: tap the photo in the thread → full-screen (or large) viewer opens.
+  3. Pinch / zoom (if offered) or see the image at a clear large size, not only a tiny bubble.
+  4. Close the viewer → back in the same chat, scroll position sensible.
+  5. A chat with no photo: nothing breaks; text messages unchanged.
+- **Status:** ✅ Fixed (Slice 7). Chat reuses `FeedMediaViewer` on image tap.
+
+### V2-BUG-005 — Both attachment buttons open the gallery · Medium
+
+- **Client said:** The DM composer has **two** attachment buttons, but **both** open the device gallery. Neither opens device **files**.
+- **Steps the client wrote:**
+  1. Open a personal direct message conversation.
+  2. Tap the first attachment button and note where it opens.
+  3. Return to the chat and tap the second attachment button.
+- **Expected:** The two buttons do different jobs — e.g. gallery vs files — matching each button’s purpose.
+- **Suggested fix (client):** Wire gallery and file picker separately.
+- **How we will test after the fix:**
+  1. Open a DM → tap the **gallery / photo** control → image (or media) picker opens; pick a photo → it attaches / sends.
+  2. Tap the **file / document** control → a file picker opens (not the same gallery-only sheet); pick a supported file → it attaches / sends.
+  3. Deny permission → a clear message, not a silent return to chat.
+  4. Cancel either picker → composer unchanged, no blank message sent.
+- **Status:** ✅ Fixed (Slice 7). ImagePlus → gallery; Paperclip → `ChatDocumentSheet` (device files).
+
 ---
 
 ## 5. Suggested build order
@@ -715,6 +818,7 @@ Backend `PATCH /posts/:postId` exists (`feed.routes.js` 122 → `feed.service.js
 6. **Content rules:** 006 categories + optional tag (backend constants), 005 drafts.
 7. **Backend logic:** 015 suggestions, 010 email flag + copy, 013 phase 2 email/phone change.
 8. ✅ **Day 3 + email/mobile (Slice 6, done):** 023, 024, 025, 026, 027, 028, 029, and BUG-013 phase 2.
+9. ✅ **Version 2 Day 1 (Slice 7, done):** V2-001 Follow/Unfollow, V2-002 profile photo, V2-003 Create Community visibility, V2-004 chat full-screen image, V2-005 gallery vs files.
 
 ---
 
@@ -746,4 +850,9 @@ Test on **one Android 13+ device** and **one iPhone**, light and dark mode.
 - [x] 026 — Report is the last row of a bottom sheet, in red
 - [x] 028 — pinned post is the first profile tile, with a pin mark; Home order unchanged
 - [x] 029 — Home search finds a person, a course, and an institute
-- [ ] `yarn typecheck` passes; backend `node --check` on changed files
+- [x] V2-001 — Feed Follow / Unfollow works; Following tab reflects follows
+- [x] V2-002 — uploaded photo shows on You and in Create Content; initials only when empty
+- [x] V2-003 — eligible role sees Create Community; aspirant behaviour matches product rule
+- [x] V2-004 — tap a photo in a DM → full / large viewer
+- [x] V2-005 — one attachment opens gallery, the other opens files
+- [x] `yarn typecheck` passes (Slice 7); backend untouched this slice

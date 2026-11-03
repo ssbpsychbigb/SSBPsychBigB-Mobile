@@ -146,20 +146,21 @@ export function FeedPostCard({
         <View style={styles.headerActions}>
           {!post.isOwn ? (
             <Pressable
-              accessibilityLabel={post.followingAuthor ? 'Following' : 'Follow'}
+              accessibilityLabel={post.followingAuthor ? 'Unfollow' : 'Follow'}
               accessibilityRole="button"
+              hitSlop={ms(6)}
               onPress={onFollow}
               style={[
                 styles.follow,
                 {
                   borderColor: theme.colors.primary,
                   backgroundColor: post.followingAuthor
-                    ? theme.colors.primaryMuted
+                    ? theme.colors.primary
                     : 'transparent',
                 },
               ]}>
               <AppText
-                color="brand"
+                color={post.followingAuthor ? 'inverse' : 'brand'}
                 style={styles.followLabel}
                 variant="caption"
                 weight="semibold">

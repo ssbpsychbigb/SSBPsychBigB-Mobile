@@ -51,7 +51,6 @@ export function ProfileScreen() {
 
   const displayName = user?.fullName?.trim() || APP_CONFIG.appName;
   const initials = getUserInitials(user?.fullName);
-  const photo = resolveUploadUrl(user?.profilePhotoPath || user?.officerPhotoPath);
   const showWorkspace =
     Boolean(user) && (isInstitutePanelUser(user) || isFreelancerEducator(user));
 
@@ -63,6 +62,12 @@ export function ProfileScreen() {
   const stats = statsQuery.data?.stats;
   const bio = statsQuery.data?.bio?.trim();
   const city = statsQuery.data?.city?.trim() || activeInstitute?.instituteName?.trim();
+  const photo = resolveUploadUrl(
+    statsQuery.data?.profilePhotoPath ||
+      statsQuery.data?.officerPhotoPath ||
+      user?.profilePhotoPath ||
+      user?.officerPhotoPath,
+  );
 
   const shareSelf = () => {
     if (statsQuery.data) {

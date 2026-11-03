@@ -25,6 +25,7 @@ export type ChatBubbleProps = {
   selected?: boolean;
   onLongPress?: (message: ThreadMessage) => void;
   onPress?: () => void;
+  onImagePress?: (uri: string) => void;
 };
 
 function hapticTap(): void {
@@ -46,6 +47,7 @@ export function ChatBubble({
   selected = false,
   onLongPress,
   onPress,
+  onImagePress,
 }: ChatBubbleProps) {
   const theme = useTheme();
   const deleted = message.status === 'deleted';
@@ -87,7 +89,17 @@ export function ChatBubble({
           hapticTap();
           onLongPress?.(message);
         }}
-        onPress={() => onPress?.()}
+        onPress={() => {
+          if (selected) {
+            onPress?.();
+            return;
+          }
+          if (imageUrl && message.attachment?.kind === 'image' && onImagePress) {
+            onImagePress(imageUrl);
+            return;
+          }
+          onPress?.();
+        }}
         style={[styles.row, mine ? styles.rowMine : styles.rowTheirs]}>
         <View
           style={[
@@ -132,7 +144,11 @@ export function ChatBubble({
               ) : null}
 
               {imageUrl && message.attachment?.kind === 'image' ? (
-                <Image source={{ uri: imageUrl }} style={styles.image} />
+                <Image
+                  accessibilityLabel="View photo full screen"
+                  source={{ uri: imageUrl }}
+                  style={styles.image}
+                />
               ) : null}
 
               {isFile ? (
