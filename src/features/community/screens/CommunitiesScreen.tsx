@@ -137,7 +137,24 @@ export function CommunitiesScreen() {
             </View>
           </Pressable>
         ) : accessToken ? (
-          <></>
+          <View
+            style={[
+              styles.hero,
+              {
+                backgroundColor: theme.colors.surface,
+                borderColor: theme.colors.border,
+              },
+            ]}>
+            <View style={styles.heroCopy}>
+              <AppText variant="label" weight="bold">
+                Officers and educators open clubs
+              </AppText>
+              <AppText color="muted" variant="caption">
+                You can join public clubs below. An institute educator needs the
+                community.create permission from their institute.
+              </AppText>
+            </View>
+          </View>
         ) : null}
 
         <View

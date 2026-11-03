@@ -17,6 +17,7 @@ import { launchImageLibrary } from 'react-native-image-picker';
 import { toMultipartFilePart } from '@/features/auth/lib/upload-asset';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { chatApi } from '@/features/message/api/chat.api';
+import { ChatDocumentSheet } from '@/features/message/components/ChatDocumentSheet';
 import { emitTypingStart, emitTypingStop } from '@/features/message/lib/chat.socket';
 import { EMOJI_GRID } from '@/features/message/lib/emoji-catalog';
 import { MOCK_GIFS, type MockGif } from '@/features/message/lib/gif-catalog';
@@ -54,6 +55,7 @@ export function ChatComposer({
   const theme = useTheme();
   const token = useAuthStore((state) => state.accessToken);
   const [picker, setPicker] = useState<Picker>(null);
+  const [fileSheetOpen, setFileSheetOpen] = useState(false);
   const [pending, setPending] = useState<MessageAttachment | null>(null);
   const [uploading, setUploading] = useState(false);
   const typingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -111,17 +113,12 @@ export function ChatComposer({
     bumpTyping(value);
   };
 
-  const uploadAsset = async (mediaType: 'photo' | 'mixed') => {
-    if (!token || editing) {
-      return;
-    }
-    const result = await launchImageLibrary({
-      mediaType,
-      selectionLimit: 1,
-      quality: 0.8,
-    });
-    const asset = result.assets?.[0];
-    if (result.didCancel || !asset?.uri) {
+  const uploadLocalFile = async (asset: {
+    uri: string;
+    type?: string;
+    name?: string;
+  }) => {
+    if (!token) {
       return;
     }
     setUploading(true);
@@ -133,7 +130,7 @@ export function ChatComposer({
           {
             uri: asset.uri,
             type: asset.type,
-            name: asset.fileName,
+            name: asset.name,
           },
           'file',
         ) as unknown as Blob,
@@ -153,6 +150,26 @@ export function ChatComposer({
     } finally {
       setUploading(false);
     }
+  };
+
+  const uploadPhoto = async () => {
+    if (!token || editing) {
+      return;
+    }
+    const result = await launchImageLibrary({
+      mediaType: 'photo',
+      selectionLimit: 1,
+      quality: 0.8,
+    });
+    const asset = result.assets?.[0];
+    if (result.didCancel || !asset?.uri) {
+      return;
+    }
+    await uploadLocalFile({
+      uri: asset.uri,
+      type: asset.type,
+      name: asset.fileName,
+    });
   };
 
   const pickGif = (gif: MockGif) => {
@@ -261,14 +278,14 @@ export function ChatComposer({
               <Sticker color={theme.colors.textMuted} size={ms(22)} strokeWidth={2} />
             </Pressable>
             <Pressable
-              accessibilityLabel="Photo"
-              onPress={() => void uploadAsset('photo')}
+              accessibilityLabel="Photo from gallery"
+              onPress={() => void uploadPhoto()}
               style={styles.tool}>
               <ImagePlus color={theme.colors.textMuted} size={ms(22)} strokeWidth={2} />
             </Pressable>
             <Pressable
-              accessibilityLabel="Attachment"
-              onPress={() => void uploadAsset('mixed')}
+              accessibilityLabel="Attach file"
+              onPress={() => setFileSheetOpen(true)}
               style={styles.tool}>
               <Paperclip color={theme.colors.textMuted} size={ms(22)} strokeWidth={2} />
             </Pressable>
@@ -327,6 +344,19 @@ export function ChatComposer({
           )}
         </Pressable>
       </View>
+
+      <ChatDocumentSheet
+        onClose={() => setFileSheetOpen(false)}
+        onPicked={(file) => {
+          setFileSheetOpen(false);
+          void uploadLocalFile({
+            uri: file.dataUrl,
+            type: file.type,
+            name: file.name,
+          });
+        }}
+        visible={fileSheetOpen && !editing}
+      />
     </View>
   );
 }

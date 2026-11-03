@@ -189,7 +189,9 @@ export function FeedScreen() {
       api: post,
       card: {
         ...toFeedCardPost(post),
-        isOwn: Boolean(user?.id && post.authorId === user.id),
+        isOwn: Boolean(
+          user?.id && String(post.authorId || post.author?.id || '') === String(user.id),
+        ),
       },
     }));
   }, [timelineQuery.data, user?.id]);
@@ -331,11 +333,53 @@ export function FeedScreen() {
   const followMutation = useMutation({
     mutationFn: (userId: string) =>
       feedApi.toggleFollow(userId, accessToken as string),
-    onSuccess: () => {
-      invalidateFeed();
+    onMutate: async (userId) => {
+      await queryClient.cancelQueries({
+        queryKey: feedKeys.timeline(tab, sessionKey),
+      });
+      const previous = queryClient.getQueryData<{
+        pages: FeedPage[];
+        pageParams: unknown[];
+      }>(feedKeys.timeline(tab, sessionKey));
+      queryClient.setQueryData(
+        feedKeys.timeline(tab, sessionKey),
+        (current: { pages: FeedPage[]; pageParams: unknown[] } | undefined) => {
+          if (!current) {
+            return current;
+          }
+          return {
+            ...current,
+            pages: current.pages.map((page) => ({
+              ...page,
+              items: page.items.map((post) => {
+                const authorId = String(post.author?.id || post.authorId || '');
+                if (authorId !== String(userId)) {
+                  return post;
+                }
+                const following = !post.viewerState?.followingAuthor;
+                return {
+                  ...post,
+                  viewerState: {
+                    liked: Boolean(post.viewerState?.liked),
+                    bookmarked: Boolean(post.viewerState?.bookmarked),
+                    followingAuthor: following,
+                  },
+                };
+              }),
+            })),
+          };
+        },
+      );
+      return { previous };
     },
-    onError: (error) => {
+    onError: (error, _userId, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(feedKeys.timeline(tab, sessionKey), context.previous);
+      }
       showErrorToast(error, 'Could not update follow.', 'Feed');
+    },
+    onSettled: () => {
+      invalidateFeed();
     },
   });
 
@@ -558,7 +602,12 @@ export function FeedScreen() {
                   onComment={() => setCommentPostId(entry.api.id)}
                   onFollow={() =>
                     requireMember('follow', () => {
-                      const authorId = entry.api.author?.id || entry.api.authorId;
+                      const authorId = String(
+                        entry.api.author?.id || entry.api.authorId || '',
+                      ).trim();
+                      if (!authorId || followMutation.isPending) {
+                        return;
+                      }
                       followMutation.mutate(authorId);
                     })
                   }

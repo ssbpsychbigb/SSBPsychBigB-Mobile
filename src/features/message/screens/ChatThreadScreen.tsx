@@ -36,6 +36,7 @@ import {
 import type { RootStackParamList } from '@/app/navigation/types';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { chatApi } from '@/features/message/api/chat.api';
+import { FeedMediaViewer } from '@/features/feed/components/FeedMediaViewer';
 import { ChatBubble } from '@/features/message/components/ChatBubble';
 import { ChatComposer } from '@/features/message/components/ChatComposer';
 import {
@@ -81,6 +82,7 @@ export function ChatThreadScreen({ navigation, route }: Props) {
   const [actionMessage, setActionMessage] = useState<ThreadMessage | null>(null);
   const [editingMessage, setEditingMessage] = useState<ThreadMessage | null>(null);
   const [deleteMessageOpen, setDeleteMessageOpen] = useState(false);
+  const [imageViewerUri, setImageViewerUri] = useState<string | null>(null);
   const typingIds = useTypingStore(
     (state) => state.byConversation[conversationId] || EMPTY_TYPING,
   );
@@ -633,6 +635,7 @@ export function ChatThreadScreen({ navigation, route }: Props) {
             renderItem={({ item, index }) => (
               <ChatBubble
                 message={item}
+                onImagePress={setImageViewerUri}
                 onLongPress={setActionMessage}
                 onPress={() => {
                   if (actionMessage) {
@@ -792,6 +795,11 @@ export function ChatThreadScreen({ navigation, route }: Props) {
           }
         }}
         visible={deleteMessageOpen}
+      />
+      <FeedMediaViewer
+        onClose={() => setImageViewerUri(null)}
+        uris={imageViewerUri ? [imageViewerUri] : []}
+        visible={Boolean(imageViewerUri)}
       />
     </Screen>
   );

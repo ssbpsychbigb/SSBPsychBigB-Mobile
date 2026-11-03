@@ -3,11 +3,13 @@
  */
 
 import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Image as ImageIcon, Smile, Sparkles, Video } from 'lucide-react-native';
 
+import { useAuthStore } from '@/features/auth/store/auth.store';
 import { getUserInitials } from '@/features/home/lib/user-initials';
 import { ms, s, vs } from '@/shared/lib/responsive';
+import { resolveUploadUrl } from '@/shared/lib/resolve-upload-url';
 import { useTheme } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
 
@@ -26,7 +28,11 @@ export function FeedComposerCard({
   onAction,
 }: FeedComposerCardProps) {
   const theme = useTheme();
-  const initials = isAuthed ? getUserInitials(displayName) : 'B';
+  const user = useAuthStore((state) => state.user);
+  const photo = isAuthed
+    ? resolveUploadUrl(user?.profilePhotoPath || user?.officerPhotoPath)
+    : null;
+  const initials = isAuthed ? getUserInitials(displayName || user?.fullName) : 'B';
 
   return (
     <View
@@ -44,11 +50,16 @@ export function FeedComposerCard({
             {
               backgroundColor: theme.colors.primaryMuted,
               borderColor: theme.colors.primary,
+              overflow: 'hidden',
             },
           ]}>
-          <AppText color="brand" variant="caption" weight="semibold">
-            {initials}
-          </AppText>
+          {photo ? (
+            <Image source={{ uri: photo }} style={styles.avatarImage} />
+          ) : (
+            <AppText color="brand" variant="caption" weight="semibold">
+              {initials}
+            </AppText>
+          )}
         </View>
         <Pressable
           accessibilityRole="button"
@@ -77,66 +88,59 @@ export function FeedComposerCard({
           directionalLockEnabled
           horizontal
           nestedScrollEnabled
-          showsHorizontalScrollIndicator={false}
-          style={styles.chipsScroll}>
+          showsHorizontalScrollIndicator={false}>
           <ComposerChip
-            icon={<ImageIcon color={theme.colors.primary} size={ms(14)} strokeWidth={2} />}
+            icon={<ImageIcon color={theme.colors.primary} size={ms(16)} strokeWidth={2} />}
             label="Photo"
             onPress={() => onAction('photo')}
           />
           <ComposerChip
-            icon={<Sparkles color={theme.colors.primary} size={ms(14)} strokeWidth={2} />}
+            icon={<Sparkles color={theme.colors.primary} size={ms(16)} strokeWidth={2} />}
             label="AI"
             onPress={() => onAction('ai')}
           />
           <ComposerChip
-            icon={<Video color={theme.colors.primary} size={ms(14)} strokeWidth={2} />}
+            icon={<Video color={theme.colors.primary} size={ms(16)} strokeWidth={2} />}
             label="Video"
             onPress={() => onAction('video')}
           />
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => onAction('compose')}
+            style={[styles.postChip, { backgroundColor: theme.colors.primary }]}>
+            <AppText color="inverse" variant="caption" weight="semibold">
+              Post
+            </AppText>
+          </Pressable>
         </ScrollView>
-        <Pressable
-          accessibilityRole="button"
-          onPress={() => onAction('compose')}
-          style={({ pressed }) => [
-            styles.postBtn,
-            { backgroundColor: theme.colors.primary, opacity: pressed ? 0.9 : 1 },
-          ]}>
-            <AppText color="inverse" style={styles.postLabel} variant="label">
-            Post
-          </AppText>
-        </Pressable>
       </View>
     </View>
   );
 }
 
-type ComposerChipProps = {
+function ComposerChip({
+  icon,
+  label,
+  onPress,
+}: {
   icon: ReactNode;
   label: string;
   onPress: () => void;
-};
-
-function ComposerChip({ icon, label, onPress }: ComposerChipProps) {
+}) {
   const theme = useTheme();
-
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [
+      style={[
         styles.chip,
         {
-          backgroundColor: theme.palette.primary[50],
-          opacity: pressed ? 0.85 : 1,
+          backgroundColor: theme.colors.background,
+          borderColor: theme.colors.border,
         },
       ]}>
       {icon}
-      <AppText
-        color="brand"
-        style={styles.chipLabel}
-        variant="caption"
-        weight="semibold">
+      <AppText variant="caption" weight="semibold">
         {label}
       </AppText>
     </Pressable>
@@ -145,75 +149,66 @@ function ComposerChip({ icon, label, onPress }: ComposerChipProps) {
 
 const styles = StyleSheet.create({
   card: {
-    borderWidth: 1,
-    borderRadius: ms(22),
-    padding: ms(14),
-    gap: ms(12),
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: ms(16),
+    paddingHorizontal: s(12),
+    paddingTop: vs(12),
+    paddingBottom: vs(10),
+    gap: vs(10),
   },
   top: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: ms(10),
+    gap: s(10),
   },
   avatar: {
-    width: ms(42),
-    height: ms(42),
-    borderRadius: ms(21),
+    width: ms(40),
+    height: ms(40),
+    borderRadius: ms(20),
     borderWidth: 1.5,
-    borderStyle: 'dashed',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  avatarImage: {
+    width: '100%',
+    height: '100%',
+  },
   field: {
     flex: 1,
-    minHeight: ms(44),
-    borderRadius: ms(22),
-    borderWidth: 1,
+    minHeight: ms(40),
+    borderRadius: ms(20),
+    borderWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: s(14),
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: ms(8),
+    gap: s(8),
   },
   placeholder: {
     flex: 1,
   },
   actions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: ms(8),
-  },
-  chipsScroll: {
-    flex: 1,
-    minWidth: 0,
+    marginLeft: ms(50),
   },
   chips: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: s(8),
     paddingRight: s(4),
   },
   chip: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexShrink: 0,
-    gap: ms(4),
-    marginRight: s(8),
+    gap: s(6),
     height: ms(32),
     paddingHorizontal: s(10),
-    borderRadius: ms(999),
+    borderRadius: ms(16),
+    borderWidth: StyleSheet.hairlineWidth,
   },
-  chipLabel: {
-    includeFontPadding: false,
-  },
-  postBtn: {
-    flexShrink: 0,
+  postChip: {
     height: ms(32),
-    paddingHorizontal: s(16),
+    paddingHorizontal: s(14),
     borderRadius: ms(16),
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  postLabel: {
-    includeFontPadding: false,
   },
 });
