@@ -5,7 +5,7 @@
 import { useState } from 'react';
 import { Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Flag, Pencil, Pin, Trash2, type LucideIcon } from 'lucide-react-native';
+import { Flag, Pencil, Pin, CircleFadingPlus, Trash2, type LucideIcon } from 'lucide-react-native';
 
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
@@ -28,11 +28,11 @@ export type FeedPostMenuProps = {
   target: FeedPostMenuTarget | null;
   busy?: boolean;
   onClose: () => void;
-  onSelect: (key: 'edit' | 'pin' | 'delete' | 'report') => void;
+  onSelect: (key: 'edit' | 'pin' | 'delete' | 'report' | 'add_story') => void;
 };
 
 type MenuRow = {
-  key: 'edit' | 'pin' | 'delete' | 'report';
+  key: 'edit' | 'pin' | 'delete' | 'report' | 'add_story';
   label: string;
   hint: string;
   Icon: LucideIcon;
@@ -47,6 +47,12 @@ export function FeedPostMenu({ target, busy, onClose, onSelect }: FeedPostMenuPr
   const insets = useSafeAreaInsets();
   const rows: MenuRow[] = target?.isOwn
     ? [
+        {
+          key: 'add_story',
+          label: 'Add to story',
+          hint: 'Share this post as a 24-hour Story.',
+          Icon: CircleFadingPlus,
+        },
         {
           key: 'edit',
           label: 'Edit',

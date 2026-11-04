@@ -18,6 +18,7 @@ import {
   useOpenAuth,
   useSwitchEducatorProfile,
 } from '@/features/auth';
+import { DayBriefHighlightsStrip } from '@/features/feed/components/DayBriefHighlightsStrip';
 import { formatCount } from '@/features/feed/lib/to-feed-card-post';
 import { getUserInitials } from '@/features/home/lib/user-initials';
 import { profileApi } from '@/features/profile/api/profile.api';
@@ -249,6 +250,10 @@ export function ProfileScreen() {
           />
         </View>
       </View>
+
+      {user?.id ? (
+        <DayBriefHighlightsStrip isSelf token={accessToken} userId={user.id} />
+      ) : null}
 
       {user?.username ? <ProfilePostGrid username={user.username} /> : null}
 
