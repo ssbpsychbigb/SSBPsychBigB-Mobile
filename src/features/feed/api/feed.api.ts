@@ -202,10 +202,26 @@ export const dayBriefApi = {
     token: string,
     input: {
       caption?: string;
-      mediaUrl: string;
-      mediaType: 'image' | 'video';
+      mediaUrl?: string;
+      mediaType: 'image' | 'video' | 'text';
       durationSec?: number;
       thumbnailUrl?: string;
+      visibility?: 'public' | 'followers' | 'close_friends';
+      audienceUserIds?: string[];
+      excludeUserIds?: string[];
+      backgroundColor?: string;
+      overlayText?: string;
+      musicId?: string;
+      musicLabel?: string;
+      stickers?: Array<{
+        id?: string;
+        type: string;
+        label?: string;
+        value?: string;
+        x?: number;
+        y?: number;
+        options?: string[];
+      }>;
     },
   ) {
     return apiRequest<DayBriefItem>('/day-briefs', {
@@ -219,6 +235,85 @@ export const dayBriefApi = {
     return apiRequest<{ id: string; viewed: boolean }>(
       `/day-briefs/${briefId}/view`,
       { method: 'POST', token },
+    );
+  },
+
+  listViewers(token: string, briefId: string) {
+    return apiRequest<{
+      items: import('@/features/feed/types/feed.types').DayBriefViewerPerson[];
+      total: number;
+    }>(`/day-briefs/${briefId}/viewers`, { token });
+  },
+
+  react(token: string, briefId: string, emoji: string) {
+    return apiRequest<{ id: string; emoji: string }>(
+      `/day-briefs/${briefId}/react`,
+      { method: 'POST', token, body: { emoji } },
+    );
+  },
+
+  removeReaction(token: string, briefId: string) {
+    return apiRequest<{ id: string; removed: boolean }>(
+      `/day-briefs/${briefId}/react`,
+      { method: 'DELETE', token },
+    );
+  },
+
+  votePoll(
+    token: string,
+    briefId: string,
+    input: { stickerId: string; optionIndex: number },
+  ) {
+    return apiRequest<{
+      id: string;
+      sticker: import('@/features/feed/types/feed.types').DayBriefSticker;
+    }>(`/day-briefs/${briefId}/poll-vote`, {
+      method: 'POST',
+      token,
+      body: input,
+    });
+  },
+
+  listHighlights(userId: string, token?: string | null) {
+    return apiRequest<{
+      items: import('@/features/feed/types/feed.types').DayBriefHighlight[];
+    }>(`/day-briefs/highlights/${userId}`, { token });
+  },
+
+  createHighlight(
+    token: string,
+    input: { title: string; coverUrl?: string; briefId?: string },
+  ) {
+    return apiRequest<
+      import('@/features/feed/types/feed.types').DayBriefHighlight
+    >('/day-briefs/highlights', {
+      method: 'POST',
+      token,
+      body: input,
+    });
+  },
+
+  addHighlightItem(token: string, highlightId: string, briefId: string) {
+    return apiRequest<
+      import('@/features/feed/types/feed.types').DayBriefHighlight
+    >(`/day-briefs/highlights/${highlightId}/items`, {
+      method: 'POST',
+      token,
+      body: { briefId },
+    });
+  },
+
+  removeHighlight(token: string, highlightId: string) {
+    return apiRequest<{ id: string; deleted: boolean }>(
+      `/day-briefs/highlights/${highlightId}`,
+      { method: 'DELETE', token },
+    );
+  },
+
+  remove(token: string, briefId: string) {
+    return apiRequest<{ id: string; deleted: boolean }>(
+      `/day-briefs/${briefId}`,
+      { method: 'DELETE', token },
     );
   },
 };

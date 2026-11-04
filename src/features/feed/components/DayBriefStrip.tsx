@@ -1,12 +1,11 @@
 /**
- * Horizontal Day Brief tiles (24h stories analogue — portrait, not rings).
+ * Horizontal Day Brief rings — Instagram-style circular trays.
  */
 
 import { Image, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Plus } from 'lucide-react-native';
 
 import type { FeedPreviewBrief } from '@/features/feed/data/feed-preview';
-import { radius } from '@/shared/constants/spacing';
 import { fontSize, lineHeight, ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
 import { AppText } from '@/shared/ui';
@@ -14,17 +13,22 @@ import { AppText } from '@/shared/ui';
 export type DayBriefStripProps = {
   briefs: FeedPreviewBrief[];
   isAuthed: boolean;
-  onSelfPress: () => void;
+  /** Empty self tile or “+” badge → create. */
+  onSelfCompose: () => void;
+  /** Open a person's tray (including own when they have stories). */
   onBriefPress: (brief: FeedPreviewBrief) => void;
 };
 
+const RING_SIZE = s(74);
+const AVATAR_SIZE = s(64);
+
 /**
- * Reels-style brief tray under the feed header — rounded portrait cards.
+ * Home story tray under the feed header.
  */
 export function DayBriefStrip({
   briefs,
   isAuthed,
-  onSelfPress,
+  onSelfCompose,
   onBriefPress,
 }: DayBriefStripProps) {
   const theme = useTheme();
@@ -41,63 +45,88 @@ export function DayBriefStrip({
         showsHorizontalScrollIndicator={false}>
         {briefs.map((brief) => {
           const isSelf = Boolean(brief.isSelf);
-          const stroke =
-            brief.unseen || isSelf ? brief.ringColor : theme.colors.border;
-          const fill = isSelf ? theme.colors.primaryMuted : brief.ringColor;
+          const hasOwnStories = isSelf && (brief.briefIds?.length || 0) > 0;
+          const showRing = Boolean(brief.unseen) || (isSelf && hasOwnStories);
+          const ringColor = showRing
+            ? brief.ringColor || theme.colors.primary
+            : theme.colors.border;
 
           return (
             <Pressable
               key={brief.id}
               accessibilityRole="button"
-              onPress={() => (isSelf ? onSelfPress() : onBriefPress(brief))}
+              onPress={() => {
+                if (isSelf && !hasOwnStories) {
+                  onSelfCompose();
+                  return;
+                }
+                onBriefPress(brief);
+              }}
               style={({ pressed }) => [styles.item, pressed ? styles.itemPressed : null]}>
-              <View
-                style={[
-                  styles.tile,
-                  {
-                    backgroundColor: fill,
-                    borderColor: stroke,
-                    borderStyle: isSelf && !isAuthed ? 'dashed' : 'solid',
-                  },
-                ]}>
-                {brief.posterUri ? (
-                  <Image source={{ uri: brief.posterUri }} style={styles.poster} />
-                ) : null}
-                <View style={styles.mark}>
-                  {isSelf && !brief.posterUri ? (
-                    <Plus
-                      color={theme.colors.primary}
-                      size={ms(22)}
-                      strokeWidth={2.4}
-                    />
-                  ) : !isSelf && !brief.posterUri ? (
-                    <AppText color="inverse" style={styles.initials} weight="bold">
-                      {brief.initials}
-                    </AppText>
-                  ) : null}
-                </View>
-
-                <View style={styles.captionScrim}>
-                  <AppText
-                    color={isSelf ? 'brand' : 'inverse'}
-                    numberOfLines={1}
-                    style={styles.caption}
-                    variant="caption"
-                    weight="semibold">
-                    {brief.name}
-                  </AppText>
+              <View style={styles.ringWrap}>
+                <View
+                  style={[
+                    styles.ring,
+                    {
+                      borderColor: ringColor,
+                      borderStyle: isSelf && !isAuthed ? 'dashed' : 'solid',
+                      borderWidth: showRing ? ms(2.5) : ms(1.5),
+                    },
+                  ]}>
+                  <View
+                    style={[
+                      styles.avatar,
+                      {
+                        backgroundColor: isSelf
+                          ? theme.colors.primaryMuted
+                          : theme.colors.surface,
+                        borderColor: theme.colors.background,
+                      },
+                    ]}>
+                    {brief.posterUri ? (
+                      <Image source={{ uri: brief.posterUri }} style={styles.poster} />
+                    ) : isSelf && !hasOwnStories ? (
+                      <Plus
+                        color={theme.colors.primary}
+                        size={ms(26)}
+                        strokeWidth={2.4}
+                      />
+                    ) : (
+                      <AppText color="brand" style={styles.initials} weight="bold">
+                        {brief.initials}
+                      </AppText>
+                    )}
+                  </View>
                 </View>
 
                 {isSelf && isAuthed ? (
-                  <View
+                  <Pressable
+                    accessibilityLabel="Add to story"
+                    hitSlop={ms(6)}
+                    onPress={(event) => {
+                      event.stopPropagation?.();
+                      onSelfCompose();
+                    }}
                     style={[
                       styles.plusBadge,
-                      { backgroundColor: theme.colors.primary },
+                      {
+                        backgroundColor: theme.colors.primary,
+                        borderColor: theme.colors.background,
+                      },
                     ]}>
-                    <Plus color="#FFFFFF" size={ms(10)} strokeWidth={3} />
-                  </View>
+                    <Plus color="#FFFFFF" size={ms(12)} strokeWidth={3} />
+                  </Pressable>
                 ) : null}
               </View>
+
+              <AppText
+                color={isSelf ? 'brand' : 'primary'}
+                numberOfLines={1}
+                style={styles.caption}
+                variant="caption"
+                weight="semibold">
+                {brief.name}
+              </AppText>
             </Pressable>
           );
         })}
@@ -108,69 +137,69 @@ export function DayBriefStrip({
 
 const styles = StyleSheet.create({
   shell: {
-    height: vs(128),
-    marginBottom: vs(4),
+    height: vs(108),
+    marginBottom: vs(2),
   },
   content: {
-    paddingHorizontal: s(16),
-    paddingRight: s(28),
-    alignItems: 'center',
+    paddingHorizontal: s(14),
+    paddingRight: s(24),
+    alignItems: 'flex-start',
+    paddingTop: vs(4),
   },
   item: {
-    marginRight: s(8),
+    width: RING_SIZE + s(6),
+    marginRight: s(10),
+    alignItems: 'center',
   },
   itemPressed: {
     opacity: 0.86,
   },
-  tile: {
-    width: s(78),
-    height: vs(112),
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-  },
-  poster: {
-    position: 'absolute',
-    top: 0,
-    right: 0,
-    bottom: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-  },
-  mark: {
-    flex: 1,
+  ringWrap: {
+    width: RING_SIZE,
+    height: RING_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  ring: {
+    width: RING_SIZE,
+    height: RING_SIZE,
+    borderRadius: RING_SIZE / 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  avatar: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    borderWidth: ms(2.5),
+    overflow: 'hidden',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  poster: {
+    width: '100%',
+    height: '100%',
   },
   initials: {
     fontSize: fontSize(18),
     lineHeight: lineHeight(18, 1.1),
-    letterSpacing: 0.4,
-  },
-  captionScrim: {
-    paddingHorizontal: s(6),
-    paddingTop: vs(10),
-    paddingBottom: vs(8),
-    backgroundColor: 'rgba(0,0,0,0.28)',
-  },
-  caption: {
-    textAlign: 'center',
-    includeFontPadding: false,
-    textShadowColor: 'rgba(0,0,0,0.45)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
   },
   plusBadge: {
     position: 'absolute',
-    right: s(6),
-    top: vs(6),
-    width: ms(20),
-    height: ms(20),
-    borderRadius: ms(10),
+    right: ms(0),
+    bottom: ms(0),
+    width: ms(22),
+    height: ms(22),
+    borderRadius: ms(11),
+    borderWidth: ms(2),
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+  },
+  caption: {
+    marginTop: vs(6),
+    width: '100%',
+    textAlign: 'center',
+    fontSize: fontSize(11),
+    lineHeight: lineHeight(11, 1.2),
   },
 });

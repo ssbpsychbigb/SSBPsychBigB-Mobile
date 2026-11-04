@@ -32,6 +32,8 @@ export type FeedPreviewBrief = {
   caption?: string;
   authorId?: string;
   username?: string;
+  /** Ordered segment ids for this person's tray (grouped strip). */
+  briefIds?: string[];
 };
 
 export type FeedPreviewPost = {
