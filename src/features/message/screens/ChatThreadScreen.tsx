@@ -72,10 +72,21 @@ export function ChatThreadScreen({ navigation, route }: Props) {
   const queryClient = useQueryClient();
   const listRef = useRef<FlatList<ThreadMessage>>(null);
   const readyRef = useRef(false);
-  const { conversationId, name, username: usernameParam } = route.params;
+  const {
+    conversationId,
+    name,
+    username: usernameParam,
+    initialDraft,
+  } = route.params;
   const token = useAuthStore((state) => state.accessToken);
   const selfId = useAuthStore((state) => state.user?.id);
-  const [draft, setDraft] = useState('');
+  const [draft, setDraft] = useState(initialDraft || '');
+
+  useEffect(() => {
+    if (initialDraft) {
+      setDraft(initialDraft);
+    }
+  }, [conversationId, initialDraft]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState(false);

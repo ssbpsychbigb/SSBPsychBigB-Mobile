@@ -141,12 +141,13 @@ export function KeyboardSheet({
               style,
             ]}>
             <View style={[styles.grabber, { backgroundColor: theme.colors.border }]} />
-            <Pressable
-              accessible={false}
-              onPress={Keyboard.dismiss}
-              style={height === 'auto' ? undefined : styles.fill}>
+            {/*
+              Use View (not Pressable): a parent Pressable steals vertical pans on
+              Android, so nested ScrollViews only scroll in empty gaps.
+            */}
+            <View style={height === 'auto' ? undefined : styles.fillColumn}>
               {children}
-            </Pressable>
+            </View>
           </Animated.View>
         </Animated.View>
       </GestureHandlerRootView>
@@ -174,6 +175,11 @@ const styles = StyleSheet.create({
   },
   fill: {
     flex: 1,
+  },
+  fillColumn: {
+    flex: 1,
+    flexDirection: 'column',
+    minHeight: 0,
   },
   grabber: {
     alignSelf: 'center',
