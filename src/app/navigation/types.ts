@@ -56,7 +56,13 @@ export type RootStackParamList = {
   Bookmarks: undefined;
   Network: undefined;
   Messages: undefined;
-  ChatThread: { conversationId: string; name?: string; username?: string };
+  ChatThread: {
+    conversationId: string;
+    name?: string;
+    username?: string;
+    /** Prefill composer (story reply / share). */
+    initialDraft?: string;
+  };
   MemberProfile: { username: string; name?: string };
   EditProfile: undefined;
   MemberNetwork: {

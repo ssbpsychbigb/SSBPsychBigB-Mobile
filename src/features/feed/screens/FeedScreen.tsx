@@ -26,9 +26,17 @@ import { useAuthStore } from '@/features/auth/store/auth.store';
 import type { PickedAsset } from '@/features/auth/types/register-form';
 import { dayBriefApi, feedApi } from '@/features/feed/api/feed.api';
 import { profilePostKeys } from '@/features/profile/api/profile.api';
-import { DayBriefComposeSheet } from '@/features/feed/components/DayBriefComposeSheet';
+import {
+  DayBriefComposeSheet,
+  type DayBriefComposeInput,
+} from '@/features/feed/components/DayBriefComposeSheet';
 import { DayBriefStrip } from '@/features/feed/components/DayBriefStrip';
 import { DayBriefViewer } from '@/features/feed/components/DayBriefViewer';
+import { DayBriefViewersSheet } from '@/features/feed/components/DayBriefViewersSheet';
+import { NewMessageSheet } from '@/features/message/components/NewMessageSheet';
+import { chatApi } from '@/features/message/api/chat.api';
+import type { ChatPerson } from '@/features/message/types/chat.types';
+import type { DayBriefItem, DayBriefTray } from '@/features/feed/types/feed.types';
 import { FeedCommentsSheet } from '@/features/feed/components/FeedCommentsSheet';
 import { EditPostSheet, type EditPostTarget } from '@/features/feed/components/EditPostSheet';
 import {
@@ -44,7 +52,10 @@ import {
   type FeedPostMenuTarget,
 } from '@/features/feed/components/FeedPostMenu';
 import { FeedSegmentTabs } from '@/features/feed/components/FeedSegmentTabs';
-import { type FeedTabKey } from '@/features/feed/data/feed-preview';
+import {
+  type FeedPreviewBrief,
+  type FeedTabKey,
+} from '@/features/feed/data/feed-preview';
 import {
   dayBriefKeys,
   feedKeys,
@@ -54,6 +65,7 @@ import {
 import { bookmarkKeys } from '@/features/feed/hooks/usePostQueries';
 import { draftKeys } from '@/features/feed/hooks/usePostDrafts';
 import { buildDayBriefStrip } from '@/features/feed/lib/build-day-brief-strip';
+import { groupDayBriefs } from '@/features/feed/lib/group-day-briefs';
 import { resolveComposeMedia } from '@/features/feed/lib/upload-post-image';
 import { toFeedCardPost } from '@/features/feed/lib/to-feed-card-post';
 import { chatKeys, useChatUnreadQuery } from '@/features/message/hooks/useChatQueries';
@@ -61,7 +73,7 @@ import {
   notificationKeys,
   useNotificationUnreadQuery,
 } from '@/features/notifications/hooks/useNotificationQueries';
-import type { DayBriefItem, FeedPage, FeedPost } from '@/features/feed/types/feed.types';
+import type { FeedPage, FeedPost } from '@/features/feed/types/feed.types';
 import { ms, s, vs } from '@/shared/lib/responsive';
 import { useTheme } from '@/shared/theme';
 import { AppText, ConfirmModal, Screen, Spinner, usePullToRefresh } from '@/shared/ui';
@@ -156,8 +168,13 @@ export function FeedScreen() {
   const [gate, setGate] = useState<GateReason | null>(null);
   const [composeOpen, setComposeOpen] = useState(false);
   const [briefComposeOpen, setBriefComposeOpen] = useState(false);
+  const [briefSeedCaption, setBriefSeedCaption] = useState<string | undefined>();
   const [commentPostId, setCommentPostId] = useState<string | null>(null);
-  const [activeBrief, setActiveBrief] = useState<DayBriefItem | null>(null);
+  const [viewerStartId, setViewerStartId] = useState<string | null>(null);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewersBriefId, setViewersBriefId] = useState<string | null>(null);
+  const [shareBrief, setShareBrief] = useState<DayBriefItem | null>(null);
+  const [shareBusy, setShareBusy] = useState(false);
   const [menuTarget, setMenuTarget] = useState<FeedPostMenuTarget | null>(null);
   const [editTarget, setEditTarget] = useState<EditPostTarget | null>(null);
   const [reportPostId, setReportPostId] = useState<string | null>(null);
@@ -180,6 +197,7 @@ export function FeedScreen() {
         queryKey: notificationKeys.unread(accessToken),
       });
       void queryClient.invalidateQueries({ queryKey: feedKeys.all });
+      void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
     }, [accessToken, queryClient]),
   );
 
@@ -196,14 +214,38 @@ export function FeedScreen() {
     }));
   }, [timelineQuery.data, user?.id]);
 
+  const liveBriefs = briefsQuery.data?.items || [];
+
   const briefTiles = useMemo(
     () =>
       buildDayBriefStrip({
-        liveItems: briefsQuery.data?.items || [],
+        liveItems: liveBriefs,
         viewerId: user?.id,
       }),
-    [briefsQuery.data?.items, user?.id],
+    [liveBriefs, user?.id],
   );
+
+  const briefTrays = useMemo(
+    () => groupDayBriefs({ items: liveBriefs, viewerId: user?.id }),
+    [liveBriefs, user?.id],
+  );
+
+  const openBriefTray = (tile: FeedPreviewBrief) => {
+    const firstId = tile.briefIds?.[0];
+    if (!firstId) {
+      return;
+    }
+    // Prefer first unviewed segment when opening someone else's tray.
+    const tray = briefTrays.find((item) =>
+      tile.isSelf ? item.isSelf : item.creatorId === tile.authorId,
+    );
+    const startId =
+      tray?.items.find((item) => !item.viewed)?.id ||
+      tray?.items[0]?.id ||
+      firstId;
+    setViewerStartId(startId);
+    setViewerOpen(true);
+  };
 
   const requireMember = (reason: GateReason, authedFallback?: () => void) => {
     if (!isAuthed || !accessToken) {
@@ -418,18 +460,42 @@ export function FeedScreen() {
   });
 
   const briefMutation = useMutation({
-    mutationFn: async (input: { caption: string; images: PickedAsset[] }) => {
+    mutationFn: async (input: DayBriefComposeInput) => {
       if (!accessToken) {
         throw new Error('Not signed in');
       }
+      const shared = {
+        caption: input.caption,
+        visibility: input.visibility,
+        audienceUserIds:
+          input.visibility === 'close_friends' ? input.audienceUserIds : undefined,
+        excludeUserIds: input.excludeUserIds.length
+          ? input.excludeUserIds
+          : undefined,
+        backgroundColor: input.backgroundColor,
+        overlayText: input.overlayText,
+        musicId: input.musicId,
+        musicLabel: input.musicLabel,
+        stickers: input.stickers,
+      };
       const created = [];
+      if (input.mode === 'text') {
+        created.push(
+          await dayBriefApi.create(accessToken, {
+            ...shared,
+            mediaType: 'text',
+            durationSec: 8,
+          }),
+        );
+        return created;
+      }
       for (const image of input.images) {
         const formData = new FormData();
         appendImagePart(formData, image);
         const uploaded = await dayBriefApi.uploadMedia(formData, accessToken);
         created.push(
           await dayBriefApi.create(accessToken, {
-            caption: input.caption,
+            ...shared,
             mediaUrl: uploaded.url,
             mediaType: uploaded.mediaType,
             thumbnailUrl: uploaded.thumbnail,
@@ -439,16 +505,145 @@ export function FeedScreen() {
       }
       return created;
     },
-    onSuccess: (_created, input) => {
+    onSuccess: async (created, input) => {
       setBriefComposeOpen(false);
-      void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+      setBriefSeedCaption(undefined);
+      await queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+      const count =
+        input.mode === 'text' ? 1 : Math.max(1, input.images.length);
       showToast.success(
-        input.images.length > 1 ? `${input.images.length} stories shared` : 'Story shared',
+        count > 1 ? `${count} stories shared` : 'Story shared',
         'Visible on Home for 24 hours. Not a Reel.',
       );
+      const firstId = created[0]?.id;
+      if (firstId) {
+        setViewerStartId(firstId);
+        setViewerOpen(true);
+      }
     },
     onError: (error) => {
       showErrorToast(error, 'Could not share this brief.', 'Day Brief');
+    },
+  });
+
+  const addPostToStoryMutation = useMutation({
+    mutationFn: async (postId: string) => {
+      if (!accessToken) {
+        throw new Error('Not signed in');
+      }
+      const post = posts.find((item) => item.api.id === postId)?.api;
+      if (!post) {
+        throw new Error('Post not found');
+      }
+      const media = (post.media || []).find(
+        (item) => item.mediaType === 'image' || item.mediaType === 'video',
+      );
+      if (media) {
+        return dayBriefApi.create(accessToken, {
+          caption: (post.content || '').slice(0, 280),
+          mediaUrl: media.url,
+          mediaType: media.mediaType === 'video' ? 'video' : 'image',
+          thumbnailUrl: media.thumbnail || media.url,
+          durationSec: media.mediaType === 'video' ? 12 : 6,
+          visibility: 'public',
+        });
+      }
+      const text = (post.content || '').trim();
+      if (!text) {
+        throw new Error('Nothing to add to story');
+      }
+      return dayBriefApi.create(accessToken, {
+        caption: text.slice(0, 280),
+        overlayText: text.slice(0, 160),
+        mediaType: 'text',
+        durationSec: 8,
+        visibility: 'public',
+      });
+    },
+    onSuccess: async (created) => {
+      await queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+      showToast.success('Added to story', 'Visible on Home for 24 hours.');
+      if (created?.id) {
+        setViewerStartId(created.id);
+        setViewerOpen(true);
+      }
+    },
+    onError: (error) => {
+      showErrorToast(error, 'Could not add this post to your story.', 'Story');
+    },
+  });
+
+  const openStoryChat = async (
+    person: { peerUserId?: string; peerUsername?: string; name?: string },
+    draftText: string,
+  ) => {
+    if (!accessToken) {
+      return;
+    }
+    setShareBusy(true);
+    try {
+      const conversation = await chatApi.createConversation({
+        token: accessToken,
+        peerUserId: person.peerUserId,
+        peerUsername: person.peerUsername,
+      });
+      setShareBrief(null);
+      setViewerOpen(false);
+      goRoot('ChatThread', {
+        conversationId: conversation.id,
+        name: person.name || conversation.name,
+        username: conversation.username || person.peerUsername,
+        initialDraft: draftText,
+      });
+    } catch (error) {
+      showErrorToast(error, 'Could not open chat.', 'Story');
+    } finally {
+      setShareBusy(false);
+    }
+  };
+
+  const replyToStory = (brief: DayBriefItem, tray: DayBriefTray) => {
+    requireMember('story', () => {
+      const username = tray.username || brief.creator?.username;
+      if (!username && !tray.creatorId) {
+        showToast.info('Reply', 'This member cannot be messaged yet.');
+        return;
+      }
+      void openStoryChat(
+        {
+          peerUserId: tray.creatorId,
+          peerUsername: username,
+          name: tray.name,
+        },
+        `Replied to your story${brief.caption ? `: ${brief.caption.slice(0, 80)}` : ''}`,
+      );
+    });
+  };
+
+  const reactToStory = (brief: DayBriefItem, emoji: string) => {
+    if (!accessToken) {
+      return;
+    }
+    void dayBriefApi
+      .react(accessToken, brief.id, emoji)
+      .then(() => {
+        void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+        showToast.success('Reaction sent', emoji);
+      })
+      .catch((error) => {
+        showErrorToast(error, 'Could not react.', 'Story');
+      });
+  };
+
+  const deleteBriefMutation = useMutation({
+    mutationFn: (briefId: string) =>
+      dayBriefApi.remove(accessToken as string, briefId),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+      showToast.success('Story deleted', 'Removed from Home.');
+    },
+    onError: (error) => {
+      showErrorToast(error, 'Could not delete this story.', 'Day Brief');
     },
   });
 
@@ -486,19 +681,10 @@ export function FeedScreen() {
           <DayBriefStrip
             briefs={briefTiles}
             isAuthed={isAuthed}
-            onBriefPress={(tile) => {
-              const live = briefsQuery.data?.items.find((item) => item.id === tile.id);
-              if (!live) {
-                return;
-              }
-              setActiveBrief(live);
-              if (accessToken) {
-                void dayBriefApi.markViewed(accessToken, live.id).then(() => {
-                  void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
-                });
-              }
-            }}
-            onSelfPress={() => requireMember('story', () => setBriefComposeOpen(true))}
+            onBriefPress={(tile) => openBriefTray(tile)}
+            onSelfCompose={() =>
+              requireMember('story', () => setBriefComposeOpen(true))
+            }
           />
 
           <View style={styles.composerBlock}>
@@ -701,8 +887,12 @@ export function FeedScreen() {
 
       <DayBriefComposeSheet
         busy={briefMutation.isPending}
-        onClose={() => setBriefComposeOpen(false)}
+        onClose={() => {
+          setBriefComposeOpen(false);
+          setBriefSeedCaption(undefined);
+        }}
         onSubmit={(input) => briefMutation.mutate(input)}
+        seedCaption={briefSeedCaption}
         visible={briefComposeOpen}
       />
 
@@ -721,10 +911,16 @@ export function FeedScreen() {
         token={accessToken}
       />
       <FeedPostMenu
-        busy={pinMutation.isPending}
+        busy={pinMutation.isPending || addPostToStoryMutation.isPending}
         onClose={() => setMenuTarget(null)}
         onSelect={(key) => {
           if (!menuTarget) {
+            return;
+          }
+          if (key === 'add_story') {
+            const postId = menuTarget.id;
+            setMenuTarget(null);
+            requireMember('story', () => addPostToStoryMutation.mutate(postId));
             return;
           }
           if (key === 'edit') {
@@ -773,9 +969,125 @@ export function FeedScreen() {
         visible={Boolean(deletePostId)}
       />
       <DayBriefViewer
-        brief={activeBrief}
-        onAuthorPress={(username, name) => openMemberProfile(username, name)}
-        onClose={() => setActiveBrief(null)}
+        canDelete={isAuthed}
+        deleteBusy={deleteBriefMutation.isPending}
+        onAddStory={() => {
+          setViewerOpen(false);
+          requireMember('story', () => setBriefComposeOpen(true));
+        }}
+        onAuthorPress={(username, name) => {
+          setViewerOpen(false);
+          openMemberProfile(username, name);
+        }}
+        onClose={() => {
+          setViewerOpen(false);
+          setViewerStartId(null);
+          void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+        }}
+        onDelete={(brief) => {
+          deleteBriefMutation.mutate(brief.id, {
+            onSuccess: () => {
+              const tray = briefTrays.find((item) =>
+                item.items.some((entry) => entry.id === brief.id),
+              );
+              const remaining =
+                tray?.items.filter((entry) => entry.id !== brief.id) || [];
+              if (remaining.length === 0) {
+                setViewerOpen(false);
+                setViewerStartId(null);
+                return;
+              }
+              setViewerStartId(remaining[0]?.id || null);
+            },
+          });
+        }}
+        onOpenViewers={(brief) => setViewersBriefId(brief.id)}
+        onReact={reactToStory}
+        onReply={replyToStory}
+        onSegmentOpen={(brief) => {
+          if (!accessToken || brief.viewed) {
+            return;
+          }
+          void dayBriefApi.markViewed(accessToken, brief.id).then(() => {
+            void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+          });
+        }}
+        onShare={(brief) => {
+          requireMember('story', () => setShareBrief(brief));
+        }}
+        onSaveHighlight={(brief) => {
+          requireMember('story', () => {
+            if (!accessToken) {
+              return;
+            }
+            void dayBriefApi
+              .createHighlight(accessToken, {
+                title: (brief.caption || 'Highlight').slice(0, 40),
+                briefId: brief.id,
+                coverUrl: brief.posterUrl || brief.mediaUrl,
+              })
+              .then(async () => {
+                await queryClient.invalidateQueries({
+                  queryKey: ['day-brief-highlights', user?.id],
+                });
+                showToast.success('Saved to Highlights', 'Find it on your profile.');
+              })
+              .catch((error) => {
+                showErrorToast(error, 'Could not save highlight.', 'Story');
+              });
+          });
+        }}
+        onVotePoll={(brief, stickerId, optionIndex) => {
+          if (!accessToken) {
+            return;
+          }
+          void dayBriefApi
+            .votePoll(accessToken, brief.id, { stickerId, optionIndex })
+            .then(() => {
+              void queryClient.invalidateQueries({ queryKey: dayBriefKeys.all });
+            })
+            .catch((error) => {
+              showErrorToast(error, 'Could not save your vote.', 'Story');
+            });
+        }}
+        startBriefId={viewerStartId}
+        trays={briefTrays}
+        visible={viewerOpen && briefTrays.length > 0}
+      />
+
+      <DayBriefViewersSheet
+        briefId={viewersBriefId}
+        onClose={() => setViewersBriefId(null)}
+        token={accessToken}
+        visible={Boolean(viewersBriefId)}
+      />
+
+      <NewMessageSheet
+        busy={shareBusy}
+        onClose={() => setShareBrief(null)}
+        onPickPerson={(person: ChatPerson) => {
+          if (!shareBrief) {
+            return;
+          }
+          void openStoryChat(
+            {
+              peerUserId: person.id,
+              peerUsername: person.username,
+              name: person.name,
+            },
+            `Shared a story with you${shareBrief.caption ? `: ${shareBrief.caption.slice(0, 80)}` : ''}`,
+          );
+        }}
+        onPickUsername={(username) => {
+          if (!shareBrief) {
+            return;
+          }
+          void openStoryChat(
+            { peerUsername: username },
+            `Shared a story with you${shareBrief.caption ? `: ${shareBrief.caption.slice(0, 80)}` : ''}`,
+          );
+        }}
+        visible={Boolean(shareBrief)}
       />
     </>
   );

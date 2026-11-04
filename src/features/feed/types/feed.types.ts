@@ -116,13 +116,55 @@ export type UpdatePostInput = Partial<
   Pick<CreatePostInput, 'content' | 'visibility' | 'media' | 'status'>
 >;
 
+export type DayBriefVisibility = 'public' | 'followers' | 'close_friends';
+
+export type DayBriefMediaType = 'image' | 'video' | 'text';
+
+export type DayBriefStickerType =
+  | 'mention'
+  | 'hashtag'
+  | 'location'
+  | 'link'
+  | 'poll'
+  | 'question'
+  | 'text';
+
+export type DayBriefSticker = {
+  id: string;
+  type: DayBriefStickerType;
+  label?: string;
+  value?: string;
+  x?: number;
+  y?: number;
+  options?: string[];
+  tallies?: number[];
+  voteCount?: number;
+  myVote?: number | null;
+};
+
 export type DayBriefItem = {
   id: string;
   title: string;
   caption: string;
   posterUrl: string;
   videoUrl?: string;
+  mediaUrl?: string;
+  mediaType?: DayBriefMediaType;
+  backgroundColor?: string;
+  overlayText?: string;
+  musicId?: string;
+  music?: string;
+  musicLabel?: string;
+  stickers?: DayBriefSticker[];
+  /** Segment length in seconds (from API; image default ~6, video ~12). */
+  durationSec?: number;
+  createdAt?: string;
+  expiresAt?: string;
   viewed?: boolean;
+  visibility?: DayBriefVisibility;
+  myReaction?: string | null;
+  viewCount?: number;
+  reactionCount?: number;
   creator: {
     id: string;
     name: string;
@@ -130,4 +172,43 @@ export type DayBriefItem = {
     avatarUrl: string;
     verified?: boolean;
   } | null;
+};
+
+export type DayBriefHighlight = {
+  id: string;
+  title: string;
+  coverUrl: string;
+  itemCount: number;
+  items?: Array<{
+    id: string;
+    mediaType: DayBriefMediaType;
+    mediaUrl?: string;
+    thumbnailUrl?: string;
+    caption?: string;
+    overlayText?: string;
+    backgroundColor?: string;
+    durationSec?: number;
+  }>;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
+export type DayBriefViewerPerson = {
+  id: string;
+  name: string;
+  username?: string;
+  avatarUrl?: string;
+  viewedAt: string;
+  reaction?: string | null;
+};
+
+/** One person's tray of 24h story segments (Instagram-style grouping). */
+export type DayBriefTray = {
+  creatorId: string;
+  name: string;
+  username?: string;
+  avatarUrl?: string;
+  isSelf: boolean;
+  unseen: boolean;
+  items: DayBriefItem[];
 };

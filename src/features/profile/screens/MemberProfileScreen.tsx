@@ -12,6 +12,7 @@ import type { RootStackParamList } from '@/app/navigation/types';
 import { JoinToContinueSheet } from '@/features/auth/components/JoinToContinueSheet';
 import { useAuthStore } from '@/features/auth/store/auth.store';
 import { feedApi } from '@/features/feed/api/feed.api';
+import { DayBriefHighlightsStrip } from '@/features/feed/components/DayBriefHighlightsStrip';
 import { chatApi } from '@/features/message/api/chat.api';
 import { getUserInitials } from '@/features/home/lib/user-initials';
 import { followCtaLabel, roleHeadline } from '@/features/network/lib/network-display';
@@ -301,6 +302,14 @@ export function MemberProfileScreen({ navigation, route }: Props) {
               </AppText>
             </Pressable>
             </View>
+          ) : null}
+
+          {profile.id ? (
+            <DayBriefHighlightsStrip
+              isSelf={Boolean(selfId && selfId === profile.id)}
+              token={token}
+              userId={profile.id}
+            />
           ) : null}
 
           <MemberProfileTabs
